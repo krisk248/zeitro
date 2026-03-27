@@ -48,7 +48,7 @@ const PRESET_COLORS = [
   "#a16207", // amber-dark
 ];
 
-const MONTH_LABELS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -104,29 +104,30 @@ function DotGrid({ habit, history }: { habit: Habit; history: HabitHistoryEntry[
   const totalCompletions = history.filter((h) => h.completed).length;
   const streak = computeStreak(history);
 
-  // Build month label positions — find first cell of each month
-  const monthPositions: { col: number; label: string }[] = [];
+  // Build month label positions — track by month index to avoid duplicate letter issues
+  const monthPositions: { col: number; month: number }[] = [];
+  const seenMonths = new Set<number>();
   for (let col = 0; col < 53; col++) {
     const cellIndex = col * 7;
     if (cellIndex >= cells.length) break;
     const cell = cells[cellIndex];
     if (cell.getFullYear() === year) {
       const month = cell.getMonth();
-      // Only add if it's the first occurrence of this month
-      if (!monthPositions.find((mp) => mp.label === MONTH_LABELS[month])) {
-        monthPositions.push({ col, label: MONTH_LABELS[month] });
+      if (!seenMonths.has(month)) {
+        seenMonths.add(month);
+        monthPositions.push({ col, month });
       }
     }
   }
 
   return (
-    <div className="mt-4">
+    <div className="mt-4 w-full">
       {/* Month labels */}
       <div
         className="mb-1"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(53, 12px)",
+          gridTemplateColumns: "repeat(53, 1fr)",
           gap: "2px",
         }}
       >
@@ -135,23 +136,23 @@ function DotGrid({ habit, history }: { habit: Habit; history: HabitHistoryEntry[
           return (
             <div
               key={col}
-              className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground"
-              style={{ width: 12 }}
+              className="text-[9px] font-medium text-muted-foreground overflow-hidden"
             >
-              {mp ? mp.label : ""}
+              {mp ? MONTH_LABELS[mp.month] : ""}
             </div>
           );
         })}
       </div>
 
-      {/* Grid: 7 rows x 53 cols (row-major laid out as col-major) */}
+      {/* Grid: 7 rows x 53 cols, responsive width */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(53, 12px)",
-          gridTemplateRows: "repeat(7, 12px)",
+          gridTemplateColumns: "repeat(53, 1fr)",
+          gridTemplateRows: "repeat(7, 1fr)",
           gap: "2px",
           gridAutoFlow: "column",
+          aspectRatio: "53 / 7",
         }}
       >
         {cells.map((cell, i) => {
@@ -165,15 +166,13 @@ function DotGrid({ habit, history }: { habit: Habit; history: HabitHistoryEntry[
               key={i}
               title={key}
               style={{
-                width: 12,
-                height: 12,
                 borderRadius: 2,
                 backgroundColor: !isThisYear
                   ? "transparent"
                   : done
-                  ? habit.color
-                  : `${habit.color}1a`,
-                outline: isToday ? `1.5px solid ${habit.color}` : undefined,
+                    ? habit.color
+                    : `${habit.color}1a`,
+                outline: isToday ? `2px solid ${habit.color}` : undefined,
                 outlineOffset: isToday ? "1px" : undefined,
               }}
             />
