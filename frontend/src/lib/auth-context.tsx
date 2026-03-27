@@ -26,7 +26,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     getMe()
-      .then(setUser)
+      .then((me) => {
+        setUser(me);
+        // Apply theme from server preference
+        const pref = me.theme_preference ?? "dark";
+        if (pref === "light") {
+          document.documentElement.classList.remove("dark");
+          localStorage.setItem("theme", "light");
+        } else {
+          document.documentElement.classList.add("dark");
+          localStorage.setItem("theme", "dark");
+        }
+      })
       .catch(() => {
         setUser(null);
         if (!PUBLIC_PATHS.includes(pathname)) {

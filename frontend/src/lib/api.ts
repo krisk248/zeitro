@@ -52,8 +52,8 @@ export const api = {
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   },
-  delete<T>(path: string): Promise<T> {
-    return request<T>(path, { method: "DELETE" });
+  delete<T>(path: string, init: RequestInit = {}): Promise<T> {
+    return request<T>(path, { method: "DELETE", ...init });
   },
 };
 
@@ -65,6 +65,7 @@ export interface UserMe {
   email: string;
   display_name: string;
   currency_balance: number;
+  theme_preference: string;
 }
 
 export async function login(email: string, password: string): Promise<UserMe> {
@@ -95,6 +96,33 @@ export function logout(): Promise<void> {
 
 export function getMe(): Promise<UserMe> {
   return api.get<UserMe>("/api/v1/users/me");
+}
+
+// Account
+export interface UpdateProfileData {
+  display_name?: string;
+  theme_preference?: string;
+}
+
+export function updateProfile(data: UpdateProfileData): Promise<UserMe> {
+  return api.patch<UserMe>("/api/v1/account/profile", data);
+}
+
+export function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  return api.post<void>("/api/v1/account/change-password", {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
+}
+
+export function exportData(): Promise<unknown> {
+  return api.get<unknown>("/api/v1/account/export");
+}
+
+export function deleteAccount(password: string): Promise<void> {
+  return api.delete<void>("/api/v1/account", {
+    body: JSON.stringify({ password }),
+  });
 }
 
 // Tasks

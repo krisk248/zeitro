@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Sun, Moon } from "lucide-react";
+import { updateProfile } from "@/lib/api";
 
 export function ThemeToggle({ className }: { className?: string }) {
   const [isDark, setIsDark] = useState(true);
@@ -20,13 +21,15 @@ export function ThemeToggle({ className }: { className?: string }) {
   function toggle() {
     const next = !isDark;
     setIsDark(next);
+    const theme = next ? "dark" : "light";
     if (next) {
       document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
     } else {
       document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
     }
+    localStorage.setItem("theme", theme);
+    // Persist server-side — fire and forget
+    updateProfile({ theme_preference: theme }).catch(() => {});
   }
 
   return (

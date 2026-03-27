@@ -6,6 +6,7 @@ from fastapi_users import schemas
 class UserRead(schemas.BaseUser[uuid.UUID]):
     display_name: str
     currency_balance: int
+    theme_preference: str
 
 
 class UserCreate(schemas.BaseUserCreate):
