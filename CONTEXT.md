@@ -38,17 +38,20 @@ backend/app/
 │   ├── base.py          # DeclarativeBase
 │   └── engine.py        # async engine, session factory, get_async_session
 ├── models/
-│   ├── user.py          # User (UUID, display_name, currency_balance)
-│   ├── task.py          # Task (status enum, priority enum, deadline, reward, penalty)
+│   ├── user.py          # User (UUID, display_name, currency_balance, theme_preference)
+│   ├── task.py          # Task (status enum, priority enum, deadline, reward, penalty, notes)
 │   ├── tag.py           # Tag + task_tags M2M association
 │   ├── work_session.py  # WorkSession (started_at, ended_at, duration, type)
-│   └── currency_transaction.py  # CurrencyTransaction (amount, type)
+│   ├── currency_transaction.py  # CurrencyTransaction (amount, type)
+│   └── habit.py         # Habit + HabitEntry (daily check-ins)
 ├── schemas/             # Pydantic request/response models
 ├── routers/
-│   ├── tasks.py         # CRUD + complete + check-penalties
-│   ├── sessions.py      # Start/stop work sessions
+│   ├── tasks.py         # CRUD + complete + check-penalties + duplicate
+│   ├── sessions.py      # Start/stop work sessions + pomodoro stats
 │   ├── tags.py          # Tag CRUD
-│   ├── analytics.py     # Summary + daily breakdown
+│   ├── analytics.py     # Summary, daily, weekly, tags, habits
+│   ├── habits.py        # Habit CRUD + check-in toggle + year history
+│   ├── account.py       # Profile update, change password, export, delete account
 │   └── stream.py        # SSE countdown (not yet consumed by frontend)
 └── services/
     ├── gamification.py  # award_completion, apply_penalty, calculate_penalty
@@ -68,23 +71,26 @@ backend/app/
 ```
 frontend/src/
 ├── app/
-│   ├── layout.tsx         # Root layout, fonts, AuthProvider
-│   ├── page.tsx           # Dashboard (task list, penalty check on load)
+│   ├── layout.tsx         # Root layout, fonts, AuthProvider, Toaster
+│   ├── page.tsx           # Dashboard (task list, search, filter, sort, penalty check)
 │   ├── (auth)/
 │   │   ├── layout.tsx     # Centered auth layout
 │   │   ├── login/page.tsx
 │   │   └── signup/page.tsx
-│   ├── tasks/[id]/page.tsx # Task detail (countdown, sessions, edit, complete)
-│   └── analytics/page.tsx  # Stats page
+│   ├── tasks/[id]/page.tsx # Task detail (countdown, sessions, edit, complete, duplicate)
+│   ├── analytics/page.tsx  # Stats, daily/weekly, tag breakdown, habit summary
+│   ├── habits/page.tsx     # Habit tracker with year dot grid
+│   └── settings/page.tsx   # Profile, password, export, delete account
 ├── components/
 │   ├── ui/                # shadcn/ui components (owned, editable)
 │   ├── countdown-card.tsx # List row with live countdown
-│   ├── create-task-dialog.tsx # Create/edit task modal
-│   ├── work-session-tracker.tsx # Play/stop timer
-│   ├── sidebar.tsx        # Desktop nav (icon rail)
-│   ├── bottom-nav.tsx     # Mobile nav
-│   ├── top-bar.tsx        # Header with currency + avatar
-│   └── theme-toggle.tsx   # Dark/light mode
+│   ├── create-task-dialog.tsx # Create/edit task modal (with notes)
+│   ├── work-session-tracker.tsx # Manual/Pomodoro mode toggle
+│   ├── pomodoro-timer.tsx # Circular SVG progress ring with audio beep
+│   ├── sidebar.tsx        # Desktop nav (icon rail, 5 items)
+│   ├── bottom-nav.tsx     # Mobile nav (5 items)
+│   ├── top-bar.tsx        # Header with currency + avatar + theme toggle
+│   └── theme-toggle.tsx   # Dark/light mode (syncs to server)
 ├── lib/
 │   ├── api.ts             # Typed API client (all endpoints)
 │   ├── auth-context.tsx   # React context (user, login, register, logout)
@@ -116,12 +122,14 @@ frontend/src/
 
 ## Database Schema
 
-- **user**: id (UUID), email, hashed_password, display_name, currency_balance, is_active
-- **tasks**: id, user_id (FK), title, description, deadline, status (active/paused/completed/overdue/cancelled), priority (low/medium/high/urgent), reward_amount, penalty_rate, is_completed, completed_at
+- **user**: id (UUID), email, hashed_password, display_name, currency_balance, theme_preference, is_active
+- **tasks**: id, user_id (FK), title, description, notes, deadline, status (active/paused/completed/overdue/cancelled), priority (low/medium/high/urgent), reward_amount, penalty_rate, is_completed, completed_at
 - **tags**: id, user_id (FK), name, color
 - **task_tags**: task_id, tag_id (M2M)
 - **work_sessions**: id, task_id (FK), user_id (FK), started_at, ended_at, duration_seconds, session_type (manual/pomodoro), pomodoro_duration
 - **currency_transactions**: id, user_id (FK), amount, transaction_type, task_id (FK), description
+- **habits**: id, user_id (FK), name, color, cadence (daily/weekly/monthly), reward_amount, is_active
+- **habit_entries**: id, habit_id (FK), date, completed (unique on habit_id+date)
 
 ## Commands
 
@@ -158,6 +166,16 @@ npx shadcn@latest add <component> # add UI component
 
 ## Testing
 
-39 unit tests covering: auth (register, login, logout, unauthorized), tasks (CRUD, complete, duplicate complete, filters), sessions (start, stop, active, conflicts), tags (CRUD, task association), analytics (summary, daily), penalties (overdue detection, 12-hour intervals, completed skip).
+75 unit tests across 9 test files:
+- `test_auth.py` - register, login, logout, unauthorized, welcome bonus
+- `test_tasks.py` - CRUD, complete, double complete, filters, unauthorized
+- `test_task_enhancements.py` - notes, duplicate, duplicate with tags
+- `test_sessions.py` - start, stop, active session, conflicts
+- `test_pomodoro.py` - pomodoro sessions, stats, duration persistence
+- `test_tags.py` - CRUD, task-tag association, unauthorized
+- `test_penalties.py` - overdue detection, 12-hour intervals, completed skip
+- `test_habits.py` - CRUD, check-in, toggle, history, unauthorized
+- `test_analytics_v2.py` - weekly, tags, habits analytics
+- `test_account.py` - profile update, change password, export, delete account
 
 Run with: `cd backend && uv run pytest tests/ -v`

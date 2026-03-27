@@ -17,16 +17,22 @@ The countdown timer exploits several cognitive biases that make us better at fin
 
 This isn't a theory project. It's a tool built to solve a personal problem: finishing things on time.
 
-## MVP Features
+## Features
 
 - **Live T-minus countdown** — Every task shows a ticking countdown to deadline
 - **Work session logging** — Open a task card, hit play to track time spent working
+- **Pomodoro timer** — Circular progress ring, 25/50/custom minute focus sessions with audio alert
 - **Gamification** — Earn rupees for completing tasks, lose rupees for missing deadlines
 - **Penalty system** — Overdue tasks auto-deduct currency every 12 hours
-- **Analytics** — Total tasks, hours worked, currency earned/lost
+- **Habit tracking** — Daily/weekly/monthly habits with GitHub-style year dot grid heatmap
+- **Analytics** — Task stats, hours worked, currency flow, tag breakdown, weekly view, habit streaks
+- **Task notes** — Add notes to any task
+- **Search, filter, sort** — Find tasks by title, filter by status, sort by deadline/priority/created
+- **Duplicate tasks** — Clone any task with one click
 - **Tags** — Categorize tasks with colored labels
+- **Settings** — Edit profile, change password, export data, delete account
 - **Auth** — User accounts with JWT cookie-based authentication
-- **Dark/light mode** — Toggle between themes
+- **Dark/light mode** — Toggle between themes, preference saved to server
 - **Responsive** — Works on desktop, tablet, and mobile
 - **API-first** — Full REST API, frontend is decoupled from backend
 - **Dockerized** — Single `docker compose up` runs everything
@@ -94,7 +100,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 ```bash
 cd backend
-uv run pytest tests/ -v                    # 39 tests
+uv run pytest tests/ -v                    # 75 tests
 ```
 
 ## Project Structure
@@ -114,7 +120,7 @@ zeitro/
 │   └── Dockerfile
 ├── frontend/                   # Next.js application
 │   ├── src/
-│   │   ├── app/                # Pages (dashboard, auth, analytics, task detail)
+│   │   ├── app/                # Pages (dashboard, auth, analytics, habits, settings, task detail)
 │   │   ├── components/         # UI components
 │   │   ├── lib/                # API client, auth context, utilities
 │   │   └── types/              # TypeScript types
@@ -146,34 +152,54 @@ zeitro/
 | GET | /api/v1/tags | List tags |
 | POST | /api/v1/tags | Create tag |
 | DELETE | /api/v1/tags/:id | Delete tag |
+| POST | /api/v1/tasks/:id/duplicate | Duplicate task |
+| GET | /api/v1/tasks/:id/pomodoro-stats | Pomodoro stats for task |
 | GET | /api/v1/analytics/summary | Productivity stats |
 | GET | /api/v1/analytics/daily | Daily breakdown |
+| GET | /api/v1/analytics/weekly | Weekly breakdown |
+| GET | /api/v1/analytics/tags | Time per tag |
+| GET | /api/v1/analytics/habits | Habit completion stats |
+| GET | /api/v1/habits | List habits |
+| POST | /api/v1/habits | Create habit |
+| PATCH | /api/v1/habits/:id | Update habit |
+| DELETE | /api/v1/habits/:id | Delete habit |
+| POST | /api/v1/habits/:id/check | Toggle daily check-in |
+| GET | /api/v1/habits/:id/history | Year dot grid data |
+| PATCH | /api/v1/account/profile | Update display name / theme |
+| POST | /api/v1/account/change-password | Change password |
+| GET | /api/v1/account/export | Export all user data |
+| DELETE | /api/v1/account | Delete account |
 
 ## Roadmap
 
 ### Done
 - [x] Live T-minus countdown cards
-- [x] Task CRUD with tags and priorities
-- [x] Work session time tracking
+- [x] Task CRUD with tags, priorities, and notes
+- [x] Task search, filter by status, sort by deadline/priority/created
+- [x] Task duplicate
+- [x] Work session time tracking (manual + pomodoro)
+- [x] Pomodoro timer with circular progress ring and audio alert
 - [x] Gamification (earn/lose virtual currency)
-- [x] Auto-penalty for overdue tasks
-- [x] Analytics dashboard
+- [x] Auto-penalty for overdue tasks (every 12 hours)
+- [x] Habit tracking with daily/weekly/monthly cadence
+- [x] Year dot grid heatmap (GitHub-style) for habits
+- [x] Habit streaks
+- [x] Analytics dashboard (summary, daily, weekly, tag breakdown, habit stats)
 - [x] Auth (login/signup/logout)
-- [x] Dark/light mode
+- [x] Settings (profile, change password, export data, delete account)
+- [x] Dark/light mode (server-persisted preference)
+- [x] Toast notifications for all actions
 - [x] Docker containerization
-- [x] 39 unit tests + E2E suite
+- [x] 75 unit tests + E2E suite
 
 ### Planned
-- [ ] Pomodoro timer (25/5 focus mode)
 - [ ] Recurring tasks
-- [ ] Notes per task (rich text)
 - [ ] PWA (installable on phone)
-- [ ] Streak tracking
-- [ ] Sound/vibration alerts
-- [ ] Data export (CSV/JSON)
-- [ ] Settings page
-- [ ] Task search and filtering UI
-- [ ] Currency transaction history
+- [ ] Push notifications for approaching deadlines
+- [ ] Achievement badges and streaks for tasks
+- [ ] Currency transaction history view
+- [ ] Data visualization charts
+- [ ] Team/shared tasks (SaaS prep)
 
 ## Contributing
 
