@@ -11,6 +11,7 @@ from app.models.task import Task  # noqa: F401
 from app.models.tag import Tag, task_tags  # noqa: F401
 from app.models.work_session import WorkSession  # noqa: F401
 from app.models.currency_transaction import CurrencyTransaction  # noqa: F401
+from app.models.habit import Habit, HabitEntry  # noqa: F401
 
 config = context.config
 

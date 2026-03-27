@@ -1,15 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { BarChart3, Coins, TrendingDown, Clock, CheckCircle2, Circle, AlertCircle } from "lucide-react";
+import { BarChart3, Clock, CheckCircle2, Circle, AlertCircle, Flame, Tag } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Sidebar } from "@/components/sidebar";
 import { BottomNav } from "@/components/bottom-nav";
 import { TopBar } from "@/components/top-bar";
 import { useAuth } from "@/lib/auth-context";
-import { getAnalyticsSummary, getDailyAnalytics } from "@/lib/api";
-import type { AnalyticsSummary, DailyAnalytics } from "@/lib/api";
+import {
+  getAnalyticsSummary,
+  getDailyAnalytics,
+  getWeeklyAnalytics,
+  getTagAnalytics,
+  getHabitAnalytics,
+} from "@/lib/api";
+import type {
+  AnalyticsSummary,
+  DailyAnalytics,
+  WeeklyAnalytics,
+  TagAnalytics,
+  HabitAnalytics,
+} from "@/lib/api";
 
 function StatBlock({
   label,
@@ -45,17 +56,28 @@ function formatMinutes(mins: number): string {
 
 export default function AnalyticsPage() {
   const { user, isLoading } = useAuth();
-  const router = useRouter();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [daily, setDaily] = useState<DailyAnalytics[]>([]);
+  const [weekly, setWeekly] = useState<WeeklyAnalytics[]>([]);
+  const [tagAnalytics, setTagAnalytics] = useState<TagAnalytics[]>([]);
+  const [habitAnalytics, setHabitAnalytics] = useState<HabitAnalytics[]>([]);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     if (!isLoading && user) {
-      Promise.all([getAnalyticsSummary(), getDailyAnalytics()])
-        .then(([s, d]) => {
+      Promise.all([
+        getAnalyticsSummary(),
+        getDailyAnalytics(),
+        getWeeklyAnalytics().catch(() => [] as WeeklyAnalytics[]),
+        getTagAnalytics().catch(() => [] as TagAnalytics[]),
+        getHabitAnalytics().catch(() => [] as HabitAnalytics[]),
+      ])
+        .then(([s, d, w, t, h]) => {
           setSummary(s);
           setDaily(d);
+          setWeekly(w);
+          setTagAnalytics(t);
+          setHabitAnalytics(h);
         })
         .catch(() => setError(true));
     }
@@ -202,6 +224,149 @@ export default function AnalyticsPage() {
                             <span className="font-mono text-sm countdown-digits">
                               {formatMinutes(day.total_minutes)}
                             </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </>
+              )}
+
+              {weekly.length > 0 && (
+                <>
+                  <Separator className="my-6 mx-6 md:mx-8 w-auto" />
+
+                  {/* Weekly breakdown */}
+                  <section className="px-6 md:px-8">
+                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      Weekly breakdown
+                    </p>
+                    <div className="divide-y divide-border rounded-lg border border-border">
+                      {weekly.map((w) => (
+                        <div
+                          key={w.week}
+                          className="flex items-center justify-between px-4 py-3"
+                        >
+                          <div>
+                            <p className="text-sm font-medium">
+                              Week of {new Date(w.week).toLocaleDateString("en-IN", {
+                                day: "numeric",
+                                month: "short",
+                              })}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {w.sessions_count} session{w.sessions_count !== 1 ? "s" : ""}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Clock className="h-3.5 w-3.5" strokeWidth={1.5} />
+                            <span className="font-mono text-sm countdown-digits">
+                              {formatMinutes(w.total_minutes)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </>
+              )}
+
+              {tagAnalytics.length > 0 && (
+                <>
+                  <Separator className="my-6 mx-6 md:mx-8 w-auto" />
+
+                  {/* Tag breakdown */}
+                  <section className="px-6 md:px-8">
+                    <div className="mb-3 flex items-center gap-2">
+                      <Tag className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.5} />
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                        By tag
+                      </p>
+                    </div>
+                    <div className="divide-y divide-border rounded-lg border border-border">
+                      {tagAnalytics.map((t) => (
+                        <div
+                          key={t.tag_name}
+                          className="flex items-center gap-3 px-4 py-3"
+                        >
+                          <div
+                            className="h-2 w-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: t.tag_color }}
+                          />
+                          <span className="flex-1 text-sm font-medium">{t.tag_name}</span>
+                          <div className="flex items-center gap-4 text-right">
+                            <div>
+                              <p className="font-mono text-sm countdown-digits">
+                                {t.completed_count}/{t.task_count}
+                              </p>
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                done
+                              </p>
+                            </div>
+                            <div>
+                              <p className="font-mono text-sm countdown-digits">
+                                {formatMinutes(t.total_minutes)}
+                              </p>
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                time
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </>
+              )}
+
+              {habitAnalytics.length > 0 && (
+                <>
+                  <Separator className="my-6 mx-6 md:mx-8 w-auto" />
+
+                  {/* Habit summary */}
+                  <section className="px-6 md:px-8">
+                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      Habits
+                    </p>
+                    <div className="divide-y divide-border rounded-lg border border-border">
+                      {habitAnalytics.map((h) => (
+                        <div
+                          key={h.habit_name}
+                          className="flex items-center gap-3 px-4 py-3"
+                        >
+                          <div
+                            className="h-2 w-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: h.habit_color }}
+                          />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{h.habit_name}</p>
+                            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                              {h.cadence}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-4 text-right">
+                            <div className="flex items-center gap-1">
+                              <Flame className="h-3.5 w-3.5 text-orange-400" strokeWidth={2} />
+                              <span className="font-mono text-sm countdown-digits">
+                                {h.current_streak}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="font-mono text-sm countdown-digits">
+                                {Math.round(h.completion_rate)}%
+                              </p>
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                rate
+                              </p>
+                            </div>
+                            <div>
+                              <p className="font-mono text-sm countdown-digits">
+                                {h.total_completions}
+                              </p>
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                check-ins
+                              </p>
+                            </div>
                           </div>
                         </div>
                       ))}

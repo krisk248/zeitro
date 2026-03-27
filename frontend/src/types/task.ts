@@ -38,3 +38,25 @@ export interface CurrencyBalance {
   total_earned: number;
   total_lost: number;
 }
+
+export interface Habit {
+  id: string;
+  name: string;
+  color: string;
+  cadence: "daily" | "weekly" | "monthly";
+  reward_amount: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface HabitEntry {
+  id: string;
+  habit_id: string;
+  date: string;
+  completed: boolean;
+}
+
+export interface HabitHistoryEntry {
+  date: string;
+  completed: boolean;
+}

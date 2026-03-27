@@ -232,6 +232,77 @@ export function getDailyAnalytics(): Promise<DailyAnalytics[]> {
   return api.get<DailyAnalytics[]>("/api/v1/analytics/daily");
 }
 
+// Habits
+import type { Habit, HabitEntry, HabitHistoryEntry } from "@/types/task";
+
+export interface CreateHabitData {
+  name: string;
+  color?: string;
+  cadence?: "daily" | "weekly" | "monthly";
+  reward_amount?: number;
+}
+
+export function getHabits(): Promise<Habit[]> {
+  return api.get<Habit[]>("/api/v1/habits");
+}
+
+export function createHabit(data: CreateHabitData): Promise<Habit> {
+  return api.post<Habit>("/api/v1/habits", data);
+}
+
+export function updateHabit(id: string, data: Partial<CreateHabitData>): Promise<Habit> {
+  return api.patch<Habit>(`/api/v1/habits/${id}`, data);
+}
+
+export function deleteHabit(id: string): Promise<void> {
+  return api.delete<void>(`/api/v1/habits/${id}`);
+}
+
+export function checkInHabit(id: string): Promise<HabitEntry> {
+  return api.post<HabitEntry>(`/api/v1/habits/${id}/checkin`);
+}
+
+export async function getHabitHistory(id: string, year: number): Promise<HabitHistoryEntry[]> {
+  const data = await api.get<{ entries: HabitHistoryEntry[] }>(`/api/v1/habits/${id}/history?year=${year}`);
+  return data.entries;
+}
+
+// Analytics V2
+export interface WeeklyAnalytics {
+  week: string;
+  sessions_count: number;
+  total_minutes: number;
+}
+
+export interface TagAnalytics {
+  tag_name: string;
+  tag_color: string;
+  task_count: number;
+  completed_count: number;
+  total_minutes: number;
+}
+
+export interface HabitAnalytics {
+  habit_name: string;
+  habit_color: string;
+  cadence: string;
+  current_streak: number;
+  total_completions: number;
+  completion_rate: number;
+}
+
+export function getWeeklyAnalytics(): Promise<WeeklyAnalytics[]> {
+  return api.get<WeeklyAnalytics[]>("/api/v1/analytics/weekly");
+}
+
+export function getTagAnalytics(): Promise<TagAnalytics[]> {
+  return api.get<TagAnalytics[]>("/api/v1/analytics/tags");
+}
+
+export function getHabitAnalytics(): Promise<HabitAnalytics[]> {
+  return api.get<HabitAnalytics[]>("/api/v1/analytics/habits");
+}
+
 // Pomodoro
 export interface PomodoroStats {
   total_pomodoros: number;

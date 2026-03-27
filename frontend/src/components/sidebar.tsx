@@ -1,19 +1,21 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { LayoutDashboard, BarChart3, Settings, Timer, Plus } from "lucide-react";
+import { LayoutDashboard, BarChart3, Settings, Timer, Plus, Zap } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-type NavItem = "dashboard" | "analytics" | "settings";
+type NavItem = "dashboard" | "habits" | "analytics" | "settings";
 
 const NAV_ROUTES: Record<NavItem, string> = {
   dashboard: "/",
+  habits: "/habits",
   analytics: "/analytics",
   settings: "/settings",
 };
 
 const navItems: { id: NavItem; icon: typeof LayoutDashboard; label: string }[] = [
   { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { id: "habits", icon: Zap, label: "Habits" },
   { id: "analytics", icon: BarChart3, label: "Analytics" },
   { id: "settings", icon: Settings, label: "Settings" },
 ];
@@ -27,6 +29,7 @@ export function Sidebar({ onNewTask }: SidebarProps) {
   const pathname = usePathname();
 
   function getActive(): NavItem {
+    if (pathname.startsWith("/habits")) return "habits";
     if (pathname.startsWith("/analytics")) return "analytics";
     if (pathname.startsWith("/settings")) return "settings";
     return "dashboard";

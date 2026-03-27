@@ -1,14 +1,17 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.auth.users import current_active_user
 from app.db.engine import get_async_session
 from app.models.currency_transaction import CurrencyTransaction
+from app.models.habit import Habit, HabitEntry
+from app.models.tag import Tag
 from app.models.task import Task, TaskStatus
 from app.models.user import User
 from app.models.work_session import WorkSession
@@ -108,3 +111,128 @@ async def get_daily(session: SessionDep, user: UserDep) -> list[DailyEntry]:
         )
         for date, data in sorted(daily.items(), reverse=True)
     ]
+
+
+class WeeklyEntry(BaseModel):
+    week: str
+    sessions_count: int
+    total_minutes: float
+
+
+class TagAnalytics(BaseModel):
+    tag_name: str
+    tag_color: str
+    task_count: int
+    completed_count: int
+    total_minutes: float
+
+
+class HabitAnalytics(BaseModel):
+    habit_name: str
+    habit_color: str
+    cadence: str
+    current_streak: int
+    total_completions: int
+    completion_rate: float
+
+
+@router.get("/weekly", response_model=list[WeeklyEntry])
+async def get_weekly(session: SessionDep, user: UserDep) -> list[WeeklyEntry]:
+    result = await session.execute(
+        select(WorkSession).where(
+            WorkSession.user_id == user.id, WorkSession.ended_at.is_not(None)
+        )
+    )
+    sessions = result.scalars().all()
+
+    weekly: dict[str, dict] = {}
+    for ws in sessions:
+        started = ws.started_at
+        if started.tzinfo is None:
+            started = started.replace(tzinfo=timezone.utc)
+        iso_year, iso_week, _ = started.isocalendar()
+        week_key = f"{iso_year}-W{iso_week:02d}"
+        if week_key not in weekly:
+            weekly[week_key] = {"sessions": 0, "seconds": 0}
+        weekly[week_key]["sessions"] += 1
+        weekly[week_key]["seconds"] += ws.duration_seconds or 0
+
+    return [
+        WeeklyEntry(
+            week=week,
+            sessions_count=data["sessions"],
+            total_minutes=round(data["seconds"] / 60, 2),
+        )
+        for week, data in sorted(weekly.items(), reverse=True)
+    ]
+
+
+@router.get("/tags", response_model=list[TagAnalytics])
+async def get_tag_analytics(session: SessionDep, user: UserDep) -> list[TagAnalytics]:
+    tags_result = await session.execute(
+        select(Tag)
+        .where(Tag.user_id == user.id)
+        .options(selectinload(Tag.tasks).selectinload(Task.work_sessions))
+    )
+    tags = tags_result.scalars().all()
+
+    output: list[TagAnalytics] = []
+    for tag in tags:
+        task_count = len(tag.tasks)
+        completed_count = sum(1 for t in tag.tasks if t.is_completed)
+        total_seconds = sum(
+            ws.duration_seconds or 0
+            for t in tag.tasks
+            for ws in t.work_sessions
+            if ws.duration_seconds is not None
+        )
+        output.append(
+            TagAnalytics(
+                tag_name=tag.name,
+                tag_color=tag.color,
+                task_count=task_count,
+                completed_count=completed_count,
+                total_minutes=round(total_seconds / 60, 2),
+            )
+        )
+
+    return output
+
+
+@router.get("/habits", response_model=list[HabitAnalytics])
+async def get_habit_analytics(session: SessionDep, user: UserDep) -> list[HabitAnalytics]:
+    habits_result = await session.execute(
+        select(Habit)
+        .where(Habit.user_id == user.id, Habit.is_active == True)  # noqa: E712
+        .options(selectinload(Habit.entries))
+    )
+    habits = habits_result.scalars().all()
+
+    today = date.today()
+    output: list[HabitAnalytics] = []
+
+    for habit in habits:
+        completed_entries = {e.date for e in habit.entries if e.completed}
+        total_completions = len(completed_entries)
+
+        streak = 0
+        check = today
+        while check in completed_entries:
+            streak += 1
+            check -= timedelta(days=1)
+
+        days_since_created = max((today - habit.created_at.date()).days + 1, 1)
+        completion_rate = round(total_completions / days_since_created, 4)
+
+        output.append(
+            HabitAnalytics(
+                habit_name=habit.name,
+                habit_color=habit.color,
+                cadence=habit.cadence,
+                current_streak=streak,
+                total_completions=total_completions,
+                completion_rate=completion_rate,
+            )
+        )
+
+    return output

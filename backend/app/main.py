@@ -9,7 +9,7 @@ from app.auth.schemas import UserCreate, UserRead, UserUpdate
 from app.auth.users import auth_backend, fastapi_users
 from app.config import settings
 from app.db.engine import engine
-from app.routers import account, analytics, sessions, stream, tags, tasks
+from app.routers import account, analytics, habits, sessions, stream, tags, tasks
 
 
 @asynccontextmanager
@@ -59,5 +59,6 @@ app.include_router(tasks.router, prefix=settings.API_PREFIX)
 app.include_router(sessions.router, prefix=settings.API_PREFIX)
 app.include_router(tags.router, prefix=settings.API_PREFIX)
 app.include_router(analytics.router, prefix=settings.API_PREFIX)
+app.include_router(habits.router, prefix=settings.API_PREFIX)
 app.include_router(stream.router, prefix=settings.API_PREFIX)
 app.include_router(account.router, prefix=settings.API_PREFIX)
