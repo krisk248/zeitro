@@ -226,3 +226,14 @@ export function getAnalyticsSummary(): Promise<AnalyticsSummary> {
 export function getDailyAnalytics(): Promise<DailyAnalytics[]> {
   return api.get<DailyAnalytics[]>("/api/v1/analytics/daily");
 }
+
+// Pomodoro
+export interface PomodoroStats {
+  total_pomodoros: number;
+  total_minutes: number;
+  average_duration: number;
+}
+
+export function getPomodoroStats(taskId: string): Promise<PomodoroStats> {
+  return api.get<PomodoroStats>(`/api/v1/tasks/${taskId}/pomodoro-stats`);
+}

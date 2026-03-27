@@ -26,3 +26,9 @@ class WorkSessionRead(BaseModel):
     pomodoro_duration: int | None
 
     model_config = {"from_attributes": True}
+
+
+class PomodoroStats(BaseModel):
+    total_pomodoros: int
+    total_minutes: int
+    average_duration: float

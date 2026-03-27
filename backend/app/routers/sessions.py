@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.users import current_active_user
@@ -11,7 +11,7 @@ from app.db.engine import get_async_session
 from app.models.task import Task
 from app.models.user import User
 from app.models.work_session import WorkSession
-from app.schemas.work_session import WorkSessionCreate, WorkSessionRead
+from app.schemas.work_session import PomodoroStats, WorkSessionCreate, WorkSessionRead
 
 router = APIRouter(tags=["sessions"])
 
@@ -95,3 +95,37 @@ async def get_active_session(session: SessionDep, user: UserDep) -> WorkSession 
         )
     )
     return result.scalar_one_or_none()
+
+
+@router.get("/tasks/{task_id}/pomodoro-stats", response_model=PomodoroStats)
+async def get_pomodoro_stats(
+    task_id: uuid.UUID, session: SessionDep, user: UserDep
+) -> PomodoroStats:
+    task_result = await session.execute(
+        select(Task).where(Task.id == task_id, Task.user_id == user.id)
+    )
+    if not task_result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    result = await session.execute(
+        select(
+            func.count(WorkSession.id),
+            func.coalesce(func.sum(WorkSession.duration_seconds), 0),
+            func.coalesce(func.avg(WorkSession.duration_seconds), 0.0),
+        ).where(
+            WorkSession.task_id == task_id,
+            WorkSession.user_id == user.id,
+            WorkSession.session_type == "pomodoro",
+            WorkSession.ended_at.is_not(None),
+        )
+    )
+    row = result.one()
+    total_pomodoros = row[0]
+    total_seconds = row[1]
+    avg_seconds = row[2]
+
+    return PomodoroStats(
+        total_pomodoros=total_pomodoros,
+        total_minutes=int(total_seconds) // 60,
+        average_duration=round(float(avg_seconds), 2),
+    )

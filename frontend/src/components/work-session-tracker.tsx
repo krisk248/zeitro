@@ -5,11 +5,14 @@ import { toast } from "sonner";
 import { Play, Square, Clock } from "lucide-react";
 import { startSession, stopSession, getActiveSession, getTaskSessions } from "@/lib/api";
 import type { WorkSession } from "@/types/task";
+import { PomodoroTimer } from "@/components/pomodoro-timer";
 
 interface WorkSessionTrackerProps {
   taskId: string;
   isCompleted: boolean;
 }
+
+type TrackerMode = "manual" | "pomodoro";
 
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -21,6 +24,7 @@ function formatDuration(seconds: number): string {
 }
 
 export function WorkSessionTracker({ taskId, isCompleted }: WorkSessionTrackerProps) {
+  const [mode, setMode] = useState<TrackerMode>("manual");
   const [activeSession, setActiveSession] = useState<WorkSession | null>(null);
   const [sessions, setSessions] = useState<WorkSession[]>([]);
   const [elapsed, setElapsed] = useState(0);
@@ -93,59 +97,86 @@ export function WorkSessionTracker({ taskId, isCompleted }: WorkSessionTrackerPr
 
   return (
     <div className="space-y-4">
-      {/* Timer display */}
-      <div className="rounded-lg border border-border bg-secondary/30 p-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {isActive ? "Working" : "Session"}
-            </p>
-            <p className={`mt-1 font-mono text-3xl font-bold countdown-digits ${isActive ? "text-success" : "text-foreground"}`}>
-              {isActive ? formatDuration(elapsed) : "00m 00s"}
-            </p>
-          </div>
+      {/* Mode toggle */}
+      <div className="flex items-center gap-0.5 rounded-md border border-border bg-secondary/30 p-0.5 w-fit">
+        {(["manual", "pomodoro"] as TrackerMode[]).map((m) => (
+          <button
+            key={m}
+            onClick={() => setMode(m)}
+            className={`rounded px-3 py-1 text-[11px] font-semibold uppercase tracking-widest transition-colors ${
+              mode === m
+                ? "bg-foreground text-background"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
 
-          {!isCompleted && (
-            <button
-              onClick={isActive ? handleStop : handleStart}
-              disabled={loading}
-              className={`flex h-12 w-12 items-center justify-center rounded-full transition-all active:scale-95 ${
-                isActive
-                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  : "bg-foreground text-background hover:bg-foreground/90"
-              } ${loading ? "opacity-50" : ""}`}
-            >
-              {isActive ? (
-                <Square className="h-5 w-5" fill="currentColor" />
-              ) : (
-                <Play className="h-5 w-5 ml-0.5" fill="currentColor" />
+      {mode === "pomodoro" ? (
+        <PomodoroTimer
+          taskId={taskId}
+          isCompleted={isCompleted}
+          onSessionStop={loadSessions}
+        />
+      ) : (
+        <>
+          {/* Manual timer display */}
+          <div className="rounded-lg border border-border bg-secondary/30 p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  {isActive ? "Working" : "Session"}
+                </p>
+                <p className={`mt-1 font-mono text-3xl font-bold countdown-digits ${isActive ? "text-success" : "text-foreground"}`}>
+                  {isActive ? formatDuration(elapsed) : "00m 00s"}
+                </p>
+              </div>
+
+              {!isCompleted && (
+                <button
+                  onClick={isActive ? handleStop : handleStart}
+                  disabled={loading}
+                  className={`flex h-12 w-12 items-center justify-center rounded-full transition-all active:scale-95 ${
+                    isActive
+                      ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      : "bg-foreground text-background hover:bg-foreground/90"
+                  } ${loading ? "opacity-50" : ""}`}
+                >
+                  {isActive ? (
+                    <Square className="h-5 w-5" fill="currentColor" />
+                  ) : (
+                    <Play className="h-5 w-5 ml-0.5" fill="currentColor" />
+                  )}
+                </button>
               )}
-            </button>
-          )}
-        </div>
+            </div>
 
-        {isActive && (
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-success">
-            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" />
-            Recording work session
+            {isActive && (
+              <div className="mt-3 flex items-center gap-1.5 text-[11px] text-success">
+                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" />
+                Recording work session
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Session stats */}
-      <div className="flex items-center gap-4 text-sm">
-        <div className="flex items-center gap-1.5 text-muted-foreground">
-          <Clock className="h-3.5 w-3.5" />
-          <span className="font-mono countdown-digits">{formatDuration(totalSeconds + (isActive ? elapsed : 0))}</span>
-          <span className="text-[11px]">total</span>
-        </div>
-        <span className="text-muted-foreground/50">|</span>
-        <span className="text-[11px] text-muted-foreground">
-          {sessions.filter((s) => s.duration_seconds != null).length} sessions
-        </span>
-      </div>
+          {/* Session stats */}
+          <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              <span className="font-mono countdown-digits">{formatDuration(totalSeconds + (isActive ? elapsed : 0))}</span>
+              <span className="text-[11px]">total</span>
+            </div>
+            <span className="text-muted-foreground/50">|</span>
+            <span className="text-[11px] text-muted-foreground">
+              {sessions.filter((s) => s.duration_seconds != null).length} sessions
+            </span>
+          </div>
+        </>
+      )}
 
-      {/* Session history */}
+      {/* Session history — shared */}
       {sessions.length > 0 && (
         <div className="space-y-1">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
@@ -153,17 +184,27 @@ export function WorkSessionTracker({ taskId, isCompleted }: WorkSessionTrackerPr
           </p>
           <div className="space-y-0.5">
             {sessions.slice(0, 5).map((s) => (
-              <div key={s.id} className="flex items-center justify-between rounded px-2 py-1.5 text-xs text-muted-foreground hover:bg-secondary/50">
-                <span>
-                  {new Date(s.started_at).toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                  })}{" "}
-                  {new Date(s.started_at).toLocaleTimeString("en-IN", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
+              <div
+                key={s.id}
+                className="flex items-center justify-between rounded px-2 py-1.5 text-xs text-muted-foreground hover:bg-secondary/50"
+              >
+                <div className="flex items-center gap-2">
+                  <span>
+                    {new Date(s.started_at).toLocaleDateString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                    })}{" "}
+                    {new Date(s.started_at).toLocaleTimeString("en-IN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                  {s.session_type === "pomodoro" && (
+                    <span className="rounded bg-primary/10 px-1 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">
+                      pomo
+                    </span>
+                  )}
+                </div>
                 <span className="font-mono countdown-digits">
                   {s.duration_seconds != null
                     ? formatDuration(s.duration_seconds)
