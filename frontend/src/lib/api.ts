@@ -259,7 +259,7 @@ export function deleteHabit(id: string): Promise<void> {
 }
 
 export function checkInHabit(id: string): Promise<HabitEntry> {
-  return api.post<HabitEntry>(`/api/v1/habits/${id}/checkin`);
+  return api.post<HabitEntry>(`/api/v1/habits/${id}/check`);
 }
 
 export async function getHabitHistory(id: string, year: number): Promise<HabitHistoryEntry[]> {
