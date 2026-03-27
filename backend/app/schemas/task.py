@@ -9,6 +9,7 @@ from app.models.task import TaskPriority, TaskStatus
 class TaskCreate(BaseModel):
     title: str
     description: str | None = None
+    notes: str | None = None
     deadline: datetime
     priority: TaskPriority = TaskPriority.medium
     reward_amount: int = 0
@@ -19,6 +20,7 @@ class TaskCreate(BaseModel):
 class TaskUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
+    notes: str | None = None
     deadline: datetime | None = None
     status: TaskStatus | None = None
     priority: TaskPriority | None = None
@@ -40,6 +42,7 @@ class TaskRead(BaseModel):
     user_id: uuid.UUID
     title: str
     description: str | None
+    notes: str | None
     deadline: datetime
     status: TaskStatus
     priority: TaskPriority

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -80,6 +80,7 @@ async def create_task(body: TaskCreate, session: SessionDep, user: UserDep) -> T
         user_id=user.id,
         title=body.title,
         description=body.description,
+        notes=body.notes,
         deadline=body.deadline,
         priority=body.priority,
         reward_amount=body.reward_amount,
@@ -123,6 +124,35 @@ async def delete_task(task_id: uuid.UUID, session: SessionDep, user: UserDep) ->
     task = await get_task_or_404(task_id, user, session)
     await session.delete(task)
     await session.commit()
+
+
+@router.post("/{task_id}/duplicate", response_model=TaskRead, status_code=201)
+async def duplicate_task(task_id: uuid.UUID, session: SessionDep, user: UserDep) -> Task:
+    original = await get_task_or_404(task_id, user, session)
+    now = datetime.now(timezone.utc)
+    original_created = original.created_at
+    if original_created.tzinfo is None:
+        original_created = original_created.replace(tzinfo=timezone.utc)
+    original_deadline = original.deadline
+    if original_deadline.tzinfo is None:
+        original_deadline = original_deadline.replace(tzinfo=timezone.utc)
+    relative_offset: timedelta = original_deadline - original_created
+    new_deadline = now + relative_offset
+    new_task = Task(
+        user_id=user.id,
+        title=f"Copy of {original.title}",
+        description=original.description,
+        notes=original.notes,
+        priority=original.priority,
+        reward_amount=original.reward_amount,
+        penalty_rate=original.penalty_rate,
+        deadline=new_deadline,
+    )
+    if original.tags:
+        new_task.tags = list(original.tags)
+    session.add(new_task)
+    await session.commit()
+    return await get_task_or_404(new_task.id, user, session)
 
 
 @router.post("/{task_id}/complete", response_model=TaskRead)

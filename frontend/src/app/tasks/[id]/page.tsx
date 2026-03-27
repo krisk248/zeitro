@@ -3,12 +3,12 @@
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Trash2, Pencil, Coins, Flame, Calendar, Tag as TagIcon } from "lucide-react";
+import { ArrowLeft, Check, Trash2, Pencil, Copy, Coins, Flame, Calendar, Tag as TagIcon, FileText } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { WorkSessionTracker } from "@/components/work-session-tracker";
 import { CreateTaskDialog } from "@/components/create-task-dialog";
 import { useAuth } from "@/lib/auth-context";
-import { api, completeTask, deleteTask } from "@/lib/api";
+import { api, completeTask, deleteTask, duplicateTask } from "@/lib/api";
 import { calculateTimeRemaining, formatCountdown } from "@/lib/countdown";
 import type { Task } from "@/types/task";
 
@@ -54,6 +54,17 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
       router.push("/");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete task.");
+    }
+  }
+
+  async function handleDuplicate() {
+    if (!task) return;
+    try {
+      const newTask = await duplicateTask(task.id);
+      toast.success("Task duplicated");
+      router.push(`/tasks/${newTask.id}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to duplicate task.");
     }
   }
 
@@ -114,6 +125,13 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                 </button>
               </>
             )}
+            <button
+              onClick={handleDuplicate}
+              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              title="Duplicate task"
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </button>
             <button
               onClick={handleDelete}
               className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
@@ -211,6 +229,18 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
         {task.description && (
           <div className="mt-4 rounded-lg border border-border bg-secondary/30 p-4">
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{task.description}</p>
+          </div>
+        )}
+
+        {task.notes && (
+          <div className="mt-3">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Notes</p>
+            </div>
+            <div className="rounded-lg border border-border bg-secondary/30 p-4">
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{task.notes}</p>
+            </div>
           </div>
         )}
       </div>

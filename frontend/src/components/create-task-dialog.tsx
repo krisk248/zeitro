@@ -56,6 +56,7 @@ export function CreateTaskDialog({ open, onOpenChange, onCreated, task }: Create
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [notes, setNotes] = useState("");
   const [deadline, setDeadline] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [reward, setReward] = useState("5");
@@ -74,6 +75,7 @@ export function CreateTaskDialog({ open, onOpenChange, onCreated, task }: Create
       if (task) {
         setTitle(task.title);
         setDescription(task.description ?? "");
+        setNotes(task.notes ?? "");
         setDeadline(toDatetimeLocal(task.deadline));
         setPriority(task.priority);
         setReward(String(task.reward_amount));
@@ -86,6 +88,7 @@ export function CreateTaskDialog({ open, onOpenChange, onCreated, task }: Create
   function resetForm() {
     setTitle("");
     setDescription("");
+    setNotes("");
     setDeadline("");
     setPriority("medium");
     setReward("5");
@@ -114,6 +117,7 @@ export function CreateTaskDialog({ open, onOpenChange, onCreated, task }: Create
     const data: CreateTaskData = {
       title: title.trim(),
       description: description.trim() || undefined,
+      notes: notes.trim() || undefined,
       deadline: new Date(deadline).toISOString(),
       priority,
       reward_amount: parseFloat(reward) || 0,
@@ -181,6 +185,20 @@ export function CreateTaskDialog({ open, onOpenChange, onCreated, task }: Create
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="min-h-[64px] resize-none"
+            />
+          </div>
+
+          {/* Notes */}
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="task-notes" className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+              Notes
+            </Label>
+            <Textarea
+              id="task-notes"
+              placeholder="Add notes..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="min-h-[56px] resize-none"
             />
           </div>
 

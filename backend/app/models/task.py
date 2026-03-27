@@ -41,6 +41,7 @@ class Task(Base):
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[TaskStatus] = mapped_column(
         Enum(TaskStatus), nullable=False, default=TaskStatus.active

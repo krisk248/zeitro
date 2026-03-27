@@ -131,6 +131,7 @@ import type { Task, TaskPriority, Tag } from "@/types/task";
 export interface CreateTaskData {
   title: string;
   description?: string;
+  notes?: string;
   deadline: string;
   priority: TaskPriority;
   reward_amount: number;
@@ -158,6 +159,10 @@ export function deleteTask(id: string): Promise<void> {
 
 export function completeTask(id: string): Promise<Task> {
   return api.post<Task>(`/api/v1/tasks/${id}/complete`);
+}
+
+export function duplicateTask(id: string): Promise<Task> {
+  return api.post<Task>(`/api/v1/tasks/${id}/duplicate`);
 }
 
 // Sessions
