@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import select
@@ -8,11 +9,12 @@ from app.models.user import User
 from app.services.gamification import apply_penalty
 
 
-async def check_and_apply_penalties(session: AsyncSession) -> int:
+async def check_and_apply_penalties(session: AsyncSession, user_id: uuid.UUID) -> int:
     now = datetime.now(timezone.utc)
 
     result = await session.execute(
         select(Task).where(
+            Task.user_id == user_id,
             Task.status == TaskStatus.active,
             Task.is_completed == False,  # noqa: E712
             Task.deadline < now,

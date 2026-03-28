@@ -2,21 +2,21 @@ import uuid
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HabitCreate(BaseModel):
-    name: str
-    color: str = "#6366f1"
+    name: str = Field(min_length=1, max_length=255)
+    color: str = Field(default="#6366f1", pattern=r"^#[0-9a-fA-F]{6}$")
     cadence: Literal["daily", "weekly", "monthly"] = "daily"
-    reward_amount: int = 1
+    reward_amount: int = Field(default=1, ge=0, le=1000)
 
 
 class HabitUpdate(BaseModel):
-    name: str | None = None
-    color: str | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
     cadence: Literal["daily", "weekly", "monthly"] | None = None
-    reward_amount: int | None = None
+    reward_amount: int | None = Field(default=None, ge=0, le=1000)
     is_active: bool | None = None
 
 

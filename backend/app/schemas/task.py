@@ -1,31 +1,31 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, Field, computed_field
 
 from app.models.task import TaskPriority, TaskStatus
 
 
 class TaskCreate(BaseModel):
-    title: str
-    description: str | None = None
-    notes: str | None = None
+    title: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=5000)
+    notes: str | None = Field(default=None, max_length=10000)
     deadline: datetime
     priority: TaskPriority = TaskPriority.medium
-    reward_amount: int = 0
-    penalty_rate: int = 0
-    tag_ids: list[uuid.UUID] = []
+    reward_amount: int = Field(default=0, ge=0, le=10000)
+    penalty_rate: int = Field(default=0, ge=0, le=10000)
+    tag_ids: list[uuid.UUID] = Field(default=[], max_length=20)
 
 
 class TaskUpdate(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    notes: str | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=5000)
+    notes: str | None = Field(default=None, max_length=10000)
     deadline: datetime | None = None
     status: TaskStatus | None = None
     priority: TaskPriority | None = None
-    reward_amount: int | None = None
-    penalty_rate: int | None = None
+    reward_amount: int | None = Field(default=None, ge=0, le=10000)
+    penalty_rate: int | None = Field(default=None, ge=0, le=10000)
     tag_ids: list[uuid.UUID] | None = None
 
 

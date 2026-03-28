@@ -70,7 +70,7 @@ async def list_tasks(
 
 @router.post("/check-penalties", response_model=dict)
 async def check_penalties(session: SessionDep, user: UserDep) -> dict:
-    count = await check_and_apply_penalties(session)
+    count = await check_and_apply_penalties(session, user.id)
     return {"penalties_applied": count}
 
 

@@ -1,8 +1,12 @@
+import os
+import time
+from collections import defaultdict
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from app.auth.schemas import UserCreate, UserRead, UserUpdate
@@ -10,6 +14,10 @@ from app.auth.users import auth_backend, fastapi_users
 from app.config import settings
 from app.db.engine import engine
 from app.routers import account, analytics, habits, sessions, stream, tags, tasks
+
+rate_limit_store: dict[str, list[float]] = defaultdict(list)
+AUTH_RATE_LIMIT = 10
+AUTH_RATE_WINDOW = 60
 
 
 @asynccontextmanager
@@ -27,7 +35,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(
     title="Zeitro API",
-    version="0.1.0",
+    version="1.0.0",
     lifespan=lifespan,
 )
 
@@ -38,6 +46,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def rate_limit_auth(request: Request, call_next):
+    if os.environ.get("DISABLE_RATE_LIMIT") == "true":
+        return await call_next(request)
+    if request.url.path.startswith(f"{settings.API_PREFIX}/auth/"):
+        client_ip = request.client.host if request.client else "unknown"
+        now = time.time()
+        timestamps = rate_limit_store[client_ip]
+        rate_limit_store[client_ip] = [t for t in timestamps if now - t < AUTH_RATE_WINDOW]
+        if len(rate_limit_store[client_ip]) >= AUTH_RATE_LIMIT:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests. Try again later."},
+            )
+        rate_limit_store[client_ip].append(now)
+    return await call_next(request)
+
 
 app.include_router(
     fastapi_users.get_auth_router(auth_backend),

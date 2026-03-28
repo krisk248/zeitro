@@ -1,11 +1,11 @@
 import uuid
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TagCreate(BaseModel):
-    name: str
-    color: str = "#6366f1"
+    name: str = Field(min_length=1, max_length=50)
+    color: str = Field(default="#6366f1", pattern=r"^#[0-9a-fA-F]{6}$")
 
 
 class TagRead(BaseModel):

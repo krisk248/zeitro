@@ -2,6 +2,10 @@ import asyncio
 import os
 from collections.abc import AsyncGenerator
 
+os.environ.setdefault("SECRET_KEY", "test-secret-key-minimum-32-characters-long-for-tests")
+os.environ.setdefault("COOKIE_SECURE", "false")
+os.environ.setdefault("DISABLE_RATE_LIMIT", "true")
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
