@@ -47,7 +47,8 @@ cookie_transport = CookieTransport(
     cookie_max_age=3600 * 24 * 7,
     cookie_httponly=True,
     cookie_samesite="lax",
-    cookie_secure=False,
+    cookie_secure=settings.COOKIE_SECURE,
+    cookie_domain=settings.COOKIE_DOMAIN,
 )
 
 

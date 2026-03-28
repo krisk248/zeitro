@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "generate-a-random-secret-change-in-production"
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
     API_PREFIX: str = "/api/v1"
+    COOKIE_SECURE: bool = False
+    COOKIE_DOMAIN: str | None = None
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
