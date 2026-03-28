@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     API_PREFIX: str = "/api/v1"
     COOKIE_SECURE: bool = True
     COOKIE_DOMAIN: str | None = None
+    REGISTRATION_ENABLED: bool = True
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

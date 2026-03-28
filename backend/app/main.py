@@ -63,6 +63,12 @@ async def rate_limit_auth(request: Request, call_next):
                 content={"detail": "Too many requests. Try again later."},
             )
         rate_limit_store[client_ip].append(now)
+    if request.url.path == f"{settings.API_PREFIX}/auth/register" and request.method == "POST":
+        if not settings.REGISTRATION_ENABLED:
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Registration is disabled."},
+            )
     return await call_next(request)
 
 
