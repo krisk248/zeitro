@@ -1,0 +1,39 @@
+services:
+  backend:
+    image: ghcr.io/krisk248/zeitro-backend:v1.0.0
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:////data/zeitro.db
+      - SECRET_KEY=${SECRET_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000"]}
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
+      - COOKIE_DOMAIN=${COOKIE_DOMAIN:-}
+    volumes:
+      - zeitro-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - zeitro-net
+
+  frontend:
+    image: ghcr.io/krisk248/zeitro-frontend:v1.0.0
+    restart: unless-stopped
+    ports:
+      - "${ZEITRO_PORT:-3000}:3000"
+    environment:
+      - INTERNAL_API_URL=http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - zeitro-net
+
+volumes:
+  zeitro-data:
+
+networks:
+  zeitro-net:
