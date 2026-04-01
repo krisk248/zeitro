@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Search, ArrowUpDown } from "lucide-react";
+import { Search, ArrowUpDown, LayoutGrid, List } from "lucide-react";
 import { CountdownCard } from "@/components/countdown-card";
 import { TopBar } from "@/components/top-bar";
 import { Sidebar } from "@/components/sidebar";
@@ -17,6 +17,7 @@ import type { Task, Tag } from "@/types/task";
 
 type FilterStatus = "all" | "active" | "overdue" | "completed";
 type SortKey = "deadline" | "priority" | "created";
+type ViewMode = "grid" | "list";
 
 const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
@@ -157,6 +158,17 @@ export default function DashboardPage() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [sortKey, setSortKey] = useState<SortKey>("deadline");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("zeitro-view-mode") as ViewMode) ?? "grid";
+    }
+    return "grid";
+  });
+
+  function toggleViewMode(mode: ViewMode) {
+    setViewMode(mode);
+    localStorage.setItem("zeitro-view-mode", mode);
+  }
 
   async function loadTasks() {
     try {
@@ -318,7 +330,25 @@ export default function DashboardPage() {
                 ))}
               </div>
 
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
+                {/* View toggle */}
+                <div className="flex items-center gap-0.5 rounded-md border border-border p-0.5">
+                  <button
+                    onClick={() => toggleViewMode("grid")}
+                    className={`rounded p-1 transition-colors ${viewMode === "grid" ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    title="Grid view"
+                  >
+                    <LayoutGrid className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  </button>
+                  <button
+                    onClick={() => toggleViewMode("list")}
+                    className={`rounded p-1 transition-colors ${viewMode === "list" ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    title="List view"
+                  >
+                    <List className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  </button>
+                </div>
+
                 <ArrowUpDown className="h-3 w-3 text-muted-foreground" />
                 <div className="flex items-center gap-0.5">
                   {SORT_LABELS.map(({ value, label }) => (
@@ -379,7 +409,7 @@ export default function DashboardPage() {
           {/* Active tasks */}
           {displayActiveTasks.length > 0 && (
             <section>
-              <div className="flex items-center gap-2 px-6 pb-1 md:px-8">
+              <div className="flex items-center gap-2 px-6 pb-2 md:px-8">
                 <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
                   Active
                 </h2>
@@ -387,22 +417,36 @@ export default function DashboardPage() {
                   {displayActiveTasks.length}
                 </span>
               </div>
-              <div className="divide-y divide-border border-y border-border">
-                {displayActiveTasks.map((task) => (
-                  <CountdownCard
-                    key={task.id}
-                    task={task}
-                    onOpen={(id) => router.push(`/tasks/${id}`)}
-                  />
-                ))}
-              </div>
+              {viewMode === "grid" ? (
+                <div className="grid gap-3 px-6 md:px-8 sm:grid-cols-2 lg:grid-cols-3">
+                  {displayActiveTasks.map((task) => (
+                    <CountdownCard
+                      key={task.id}
+                      task={task}
+                      variant="grid"
+                      onOpen={(id) => router.push(`/tasks/${id}`)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="divide-y divide-border border-y border-border">
+                  {displayActiveTasks.map((task) => (
+                    <CountdownCard
+                      key={task.id}
+                      task={task}
+                      variant="list"
+                      onOpen={(id) => router.push(`/tasks/${id}`)}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
           {/* Completed tasks */}
           {displayCompletedTasks.length > 0 && (
             <section className="mt-8">
-              <div className="flex items-center gap-2 px-6 pb-1 md:px-8">
+              <div className="flex items-center gap-2 px-6 pb-2 md:px-8">
                 <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
                   Completed
                 </h2>
@@ -410,15 +454,29 @@ export default function DashboardPage() {
                   {displayCompletedTasks.length}
                 </span>
               </div>
-              <div className="divide-y divide-border border-y border-border">
-                {displayCompletedTasks.map((task) => (
-                  <CountdownCard
-                    key={task.id}
-                    task={task}
-                    onOpen={(id) => router.push(`/tasks/${id}`)}
-                  />
-                ))}
-              </div>
+              {viewMode === "grid" ? (
+                <div className="grid gap-3 px-6 md:px-8 sm:grid-cols-2 lg:grid-cols-3">
+                  {displayCompletedTasks.map((task) => (
+                    <CountdownCard
+                      key={task.id}
+                      task={task}
+                      variant="grid"
+                      onOpen={(id) => router.push(`/tasks/${id}`)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="divide-y divide-border border-y border-border">
+                  {displayCompletedTasks.map((task) => (
+                    <CountdownCard
+                      key={task.id}
+                      task={task}
+                      variant="list"
+                      onOpen={(id) => router.push(`/tasks/${id}`)}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
