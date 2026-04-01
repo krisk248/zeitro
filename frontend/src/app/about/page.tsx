@@ -197,6 +197,36 @@ export default function AboutPage() {
           </div>
         </section>
 
+        <Separator className="my-8" />
+
+        {/* Inspiration */}
+        <section className="mb-10">
+          <h2 className="font-heading text-lg font-semibold tracking-tight mb-4">
+            Inspiration
+          </h2>
+          <div className="rounded-lg border border-border bg-secondary/20 p-5">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              The spark behind Zeitro came from a fellow human —{" "}
+              <strong className="text-foreground">Shankar Balakrishnan</strong>. His methods
+              of self-motivation and notional ways of leading life showed me that the right
+              system can turn intention into action. The idea that even symbolic stakes — not
+              real money, just a number on a screen — can rewire how seriously you treat your
+              own commitments came directly from watching how he operates.
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed mt-3">
+              You can read more about his approach and the thinking that shaped Zeitro
+              in{" "}
+              <a
+                href="#"
+                className="font-medium text-chart-1 underline underline-offset-2 hover:text-chart-1/80 transition-colors"
+              >
+                this blog post
+              </a>
+              .
+            </p>
+          </div>
+        </section>
+
         {/* Version */}
         <div className="text-center text-[11px] text-muted-foreground py-4">
           <p>Zeitro v1.0.0</p>
