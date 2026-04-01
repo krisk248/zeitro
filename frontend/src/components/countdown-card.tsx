@@ -65,7 +65,7 @@ export function CountdownCard({ task, onOpen }: CountdownCardProps) {
           {task.tags.map((tag) => (
             <span
               key={tag.id}
-              className="hidden shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium sm:inline-block"
+              className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium"
               style={{ backgroundColor: `${tag.color}15`, color: tag.color }}
             >
               {tag.name}

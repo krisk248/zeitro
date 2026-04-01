@@ -193,6 +193,10 @@ export function createTag(name: string, color: string): Promise<Tag> {
   return api.post<Tag>("/api/v1/tags", { name, color });
 }
 
+export function updateTag(id: string, data: { name?: string; color?: string }): Promise<Tag> {
+  return api.patch<Tag>(`/api/v1/tags/${id}`, data);
+}
+
 export function deleteTag(id: string): Promise<void> {
   return api.delete<void>(`/api/v1/tags/${id}`);
 }

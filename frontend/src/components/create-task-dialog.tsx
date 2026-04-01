@@ -20,9 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createTask, updateTask, getTags } from "@/lib/api";
+import { createTask, updateTask, getTags, createTag } from "@/lib/api";
 import type { CreateTaskData } from "@/lib/api";
 import type { Tag, Task, TaskPriority } from "@/types/task";
+
+const DEFAULT_TAG_COLOR = "#6366f1";
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -63,6 +65,8 @@ export function CreateTaskDialog({ open, onOpenChange, onCreated, task }: Create
   const [penaltyRate, setPenaltyRate] = useState("1");
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [newTagInput, setNewTagInput] = useState("");
+  const [creatingTag, setCreatingTag] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
 
@@ -94,6 +98,7 @@ export function CreateTaskDialog({ open, onOpenChange, onCreated, task }: Create
     setReward("5");
     setPenaltyRate("1");
     setSelectedTagIds([]);
+    setNewTagInput("");
     setError(null);
   }
 
@@ -101,6 +106,22 @@ export function CreateTaskDialog({ open, onOpenChange, onCreated, task }: Create
     setSelectedTagIds((prev) =>
       prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
     );
+  }
+
+  async function handleCreateNewTag() {
+    const name = newTagInput.trim();
+    if (!name) return;
+    setCreatingTag(true);
+    try {
+      const tag = await createTag(name, DEFAULT_TAG_COLOR);
+      setTags((prev) => [...prev, tag].sort((a, b) => a.name.localeCompare(b.name)));
+      setSelectedTagIds((prev) => [...prev, tag.id]);
+      setNewTagInput("");
+    } catch {
+      // silent — tag creation is secondary action in this context
+    } finally {
+      setCreatingTag(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -283,11 +304,30 @@ export function CreateTaskDialog({ open, onOpenChange, onCreated, task }: Create
           </div>
 
           {/* Tags */}
-          {tags.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
-                Tags
-              </Label>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+              Tags
+            </Label>
+
+            {/* Selected tags summary */}
+            {selectedTagIds.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-0.5">
+                {tags
+                  .filter((t) => selectedTagIds.includes(t.id))
+                  .map((tag) => (
+                    <span
+                      key={tag.id}
+                      className="rounded px-2 py-0.5 text-[11px] font-medium"
+                      style={{ backgroundColor: `${tag.color}25`, color: tag.color, border: `1px solid ${tag.color}40` }}
+                    >
+                      {tag.name}
+                    </span>
+                  ))}
+              </div>
+            )}
+
+            {/* All tags as pills */}
+            {tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {tags.map((tag) => {
                   const selected = selectedTagIds.includes(tag.id);
@@ -308,8 +348,19 @@ export function CreateTaskDialog({ open, onOpenChange, onCreated, task }: Create
                   );
                 })}
               </div>
-            </div>
-          )}
+            )}
+
+            {/* Inline create input */}
+            <input
+              type="text"
+              value={newTagInput}
+              onChange={(e) => setNewTagInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleCreateNewTag(); } }}
+              placeholder={creatingTag ? "Creating…" : "Type to create new tag…"}
+              disabled={creatingTag}
+              className="mt-0.5 rounded-md border border-border bg-secondary/30 px-3 py-1.5 text-[12px] text-foreground placeholder:text-muted-foreground/60 focus:border-foreground/30 focus:outline-none disabled:opacity-50"
+            />
+          </div>
 
           {error && (
             <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">

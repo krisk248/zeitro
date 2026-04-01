@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -12,6 +12,10 @@ import {
   Download,
   Eye,
   EyeOff,
+  Tag as TagIcon,
+  Plus,
+  Pencil,
+  Check,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Sidebar } from "@/components/sidebar";
@@ -19,7 +23,21 @@ import { BottomNav } from "@/components/bottom-nav";
 import { TopBar } from "@/components/top-bar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/lib/auth-context";
-import { updateProfile, changePassword, exportData, deleteAccount } from "@/lib/api";
+import { updateProfile, changePassword, exportData, deleteAccount, getTags, createTag, updateTag, deleteTag } from "@/lib/api";
+import type { Tag } from "@/types/task";
+
+const PRESET_COLORS = [
+  "#ef4444",
+  "#f97316",
+  "#eab308",
+  "#22c55e",
+  "#06b6d4",
+  "#3b82f6",
+  "#8b5cf6",
+  "#ec4899",
+  "#64748b",
+  "#a16207",
+];
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -48,11 +66,27 @@ export default function SettingsPage() {
   const [showDeletePassword, setShowDeletePassword] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Tags section
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [showNewTag, setShowNewTag] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagColor, setNewTagColor] = useState(PRESET_COLORS[5]);
+  const [creatingTag, setCreatingTag] = useState(false);
+  const [editingTagId, setEditingTagId] = useState<string | null>(null);
+  const [editingTagName, setEditingTagName] = useState("");
+  const editInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (user) {
       setDisplayName(user.display_name ?? "");
     }
   }, [user]);
+
+  useEffect(() => {
+    getTags()
+      .then(setTags)
+      .catch(() => setTags([]));
+  }, []);
 
   const displayNameChanged = displayName.trim() !== (user?.display_name ?? "");
 
@@ -129,6 +163,52 @@ export default function SettingsPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete account");
       setDeleting(false);
+    }
+  }
+
+  async function handleCreateTag() {
+    if (!newTagName.trim()) return;
+    setCreatingTag(true);
+    try {
+      const tag = await createTag(newTagName.trim(), newTagColor);
+      setTags((prev) => [...prev, tag].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewTagName("");
+      setNewTagColor(PRESET_COLORS[5]);
+      setShowNewTag(false);
+      toast.success("Tag created");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create tag");
+    } finally {
+      setCreatingTag(false);
+    }
+  }
+
+  function startEditTag(tag: Tag) {
+    setEditingTagId(tag.id);
+    setEditingTagName(tag.name);
+    setTimeout(() => editInputRef.current?.focus(), 0);
+  }
+
+  async function commitEditTag(tag: Tag) {
+    const trimmed = editingTagName.trim();
+    setEditingTagId(null);
+    if (!trimmed || trimmed === tag.name) return;
+    try {
+      const updated = await updateTag(tag.id, { name: trimmed });
+      setTags((prev) => prev.map((t) => (t.id === updated.id ? updated : t)).sort((a, b) => a.name.localeCompare(b.name)));
+      toast.success("Tag renamed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to rename tag");
+    }
+  }
+
+  async function handleDeleteTag(id: string) {
+    try {
+      await deleteTag(id);
+      setTags((prev) => prev.filter((t) => t.id !== id));
+      toast.success("Tag deleted");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete tag");
     }
   }
 
@@ -229,6 +309,111 @@ export default function SettingsPage() {
                   <ThemeToggle />
                 </div>
               </div>
+            </section>
+
+            <Separator className="my-6" />
+
+            {/* Tags section */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <TagIcon className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.5} />
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Tags
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setShowNewTag((v) => !v); setNewTagName(""); }}
+                  className="flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/40"
+                >
+                  <Plus className="h-3 w-3" />
+                  New Tag
+                </button>
+              </div>
+
+              {/* New tag form */}
+              {showNewTag && (
+                <div className="mb-3 rounded-lg border border-border bg-secondary/20 p-3 space-y-2.5">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newTagName}
+                      onChange={(e) => setNewTagName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") handleCreateTag(); if (e.key === "Escape") setShowNewTag(false); }}
+                      placeholder="Tag name"
+                      autoFocus
+                      className="flex-1 rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-foreground/30 focus:outline-none"
+                    />
+                    <button
+                      onClick={handleCreateTag}
+                      disabled={!newTagName.trim() || creatingTag}
+                      className="flex h-8 items-center rounded-md bg-foreground px-3 text-xs font-medium text-background transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {creatingTag ? "Adding…" : "Add"}
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PRESET_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setNewTagColor(c)}
+                        className="h-5 w-5 rounded-full transition-transform hover:scale-110"
+                        style={{ backgroundColor: c, outline: newTagColor === c ? `2px solid ${c}` : "none", outlineOffset: "2px" }}
+                        aria-label={`Select color ${c}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Tag list */}
+              {tags.length === 0 ? (
+                <p className="text-[12px] text-muted-foreground">No tags yet. Create one above.</p>
+              ) : (
+                <div className="space-y-1">
+                  {tags.map((tag) => (
+                    <div
+                      key={tag.id}
+                      className="flex items-center gap-3 rounded-lg border border-border px-3 py-2 group"
+                    >
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: tag.color }}
+                      />
+                      {editingTagId === tag.id ? (
+                        <input
+                          ref={editInputRef}
+                          type="text"
+                          value={editingTagName}
+                          onChange={(e) => setEditingTagName(e.target.value)}
+                          onBlur={() => commitEditTag(tag)}
+                          onKeyDown={(e) => { if (e.key === "Enter") commitEditTag(tag); if (e.key === "Escape") setEditingTagId(null); }}
+                          className="flex-1 rounded border border-border bg-background px-2 py-0.5 text-sm text-foreground focus:border-foreground/30 focus:outline-none"
+                        />
+                      ) : (
+                        <span className="flex-1 text-sm text-foreground">{tag.name}</span>
+                      )}
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => startEditTag(tag)}
+                          className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                          aria-label={`Rename ${tag.name}`}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTag(tag.id)}
+                          className="rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          aria-label={`Delete ${tag.name}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
 
             <Separator className="my-6" />

@@ -12,8 +12,8 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { CreateTaskDialog } from "@/components/create-task-dialog";
 import { useAuth } from "@/lib/auth-context";
-import { getTasks, checkPenalties } from "@/lib/api";
-import type { Task } from "@/types/task";
+import { getTasks, checkPenalties, getTags } from "@/lib/api";
+import type { Task, Tag } from "@/types/task";
 
 type FilterStatus = "all" | "active" | "overdue" | "completed";
 type SortKey = "deadline" | "priority" | "created";
@@ -151,6 +151,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, isLoading, refreshUser } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
@@ -158,8 +160,9 @@ export default function DashboardPage() {
 
   async function loadTasks() {
     try {
-      const data = await getTasks();
+      const [data, tagsData] = await Promise.all([getTasks(), getTags()]);
       setTasks(data);
+      setAllTags(tagsData);
       return data;
     } catch {
       setTasks(demoTasks);
@@ -206,9 +209,13 @@ export default function DashboardPage() {
 
     let filtered = tasks.filter((t) => {
       if (q && !t.title.toLowerCase().includes(q)) return false;
-      if (filterStatus === "active") return !t.is_completed && new Date(t.deadline).getTime() > now;
-      if (filterStatus === "overdue") return !t.is_completed && new Date(t.deadline).getTime() <= now;
-      if (filterStatus === "completed") return t.is_completed;
+      if (filterStatus === "active") { if (t.is_completed || new Date(t.deadline).getTime() <= now) return false; }
+      else if (filterStatus === "overdue") { if (t.is_completed || new Date(t.deadline).getTime() > now) return false; }
+      else if (filterStatus === "completed") { if (!t.is_completed) return false; }
+      if (selectedTagIds.length > 0) {
+        const taskTagIds = t.tags.map((tag) => tag.id);
+        if (!selectedTagIds.some((id) => taskTagIds.includes(id))) return false;
+      }
       return true;
     });
 
@@ -220,7 +227,7 @@ export default function DashboardPage() {
     });
 
     return filtered;
-  }, [tasks, search, filterStatus, sortKey]);
+  }, [tasks, search, filterStatus, sortKey, selectedTagIds]);
 
   const displayActiveTasks = useMemo(() => filteredSortedTasks.filter((t) => !t.is_completed), [filteredSortedTasks]);
   const displayCompletedTasks = useMemo(() => filteredSortedTasks.filter((t) => t.is_completed), [filteredSortedTasks]);
@@ -330,6 +337,43 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+
+            {/* Tag filter pills */}
+            {allTags.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  onClick={() => setSelectedTagIds([])}
+                  className={`rounded px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                    selectedTagIds.length === 0
+                      ? "bg-foreground text-background"
+                      : "border border-border text-muted-foreground hover:text-foreground hover:border-foreground/40"
+                  }`}
+                >
+                  All Tags
+                </button>
+                {allTags.map((tag) => {
+                  const active = selectedTagIds.includes(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      onClick={() =>
+                        setSelectedTagIds((prev) =>
+                          active ? prev.filter((id) => id !== tag.id) : [...prev, tag.id],
+                        )
+                      }
+                      className="rounded px-2.5 py-0.5 text-[11px] font-medium transition-all"
+                      style={{
+                        backgroundColor: active ? `${tag.color}20` : "transparent",
+                        color: active ? tag.color : "var(--muted-foreground)",
+                        border: `1px solid ${active ? tag.color + "50" : "var(--border)"}`,
+                      }}
+                    >
+                      {tag.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Active tasks */}
