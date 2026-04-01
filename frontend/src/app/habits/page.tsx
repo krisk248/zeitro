@@ -57,21 +57,49 @@ function getTodayString(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function buildYearGrid(year: number): Date[] {
-  // Start from Jan 1 of the year, pad to the nearest Sunday before
-  const jan1 = new Date(year, 0, 1);
-  const startDayOfWeek = jan1.getDay(); // 0=Sun
-  const start = new Date(jan1);
-  start.setDate(start.getDate() - startDayOfWeek);
+interface WeekColumn {
+  weekIndex: number;
+  days: (Date | null)[];
+}
 
-  const cells: Date[] = [];
-  const cur = new Date(start);
-  // 53 weeks * 7 = 371 days, enough to cover any year
-  for (let i = 0; i < 53 * 7; i++) {
-    cells.push(new Date(cur));
+function buildYearGrid(year: number): WeekColumn[] {
+  const jan1 = new Date(year, 0, 1);
+  const dec31 = new Date(year, 11, 31);
+
+  const weeks: WeekColumn[] = [];
+  const cur = new Date(jan1);
+  let weekIndex = 0;
+
+  // First week: pad days before Jan 1 with null
+  const firstDayOfWeek = jan1.getDay(); // 0=Sun
+  const firstWeek: (Date | null)[] = [];
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    firstWeek.push(null);
+  }
+  // Fill rest of first week
+  while (firstWeek.length < 7 && cur <= dec31) {
+    firstWeek.push(new Date(cur));
     cur.setDate(cur.getDate() + 1);
   }
-  return cells;
+  weeks.push({ weekIndex, days: firstWeek });
+  weekIndex++;
+
+  // Remaining weeks
+  while (cur <= dec31) {
+    const week: (Date | null)[] = [];
+    for (let i = 0; i < 7 && cur <= dec31; i++) {
+      week.push(new Date(cur));
+      cur.setDate(cur.getDate() + 1);
+    }
+    // Pad last week with nulls
+    while (week.length < 7) {
+      week.push(null);
+    }
+    weeks.push({ weekIndex, days: week });
+    weekIndex++;
+  }
+
+  return weeks;
 }
 
 function dateToKey(d: Date): string {
@@ -99,23 +127,22 @@ function computeStreak(history: HabitHistoryEntry[]): number {
 
 function DotGrid({ habit, history }: { habit: Habit; history: HabitHistoryEntry[] }) {
   const year = new Date().getFullYear();
-  const cells = buildYearGrid(year);
+  const weeks = buildYearGrid(year);
   const completedSet = new Set(history.filter((h) => h.completed).map((h) => h.date));
   const totalCompletions = history.filter((h) => h.completed).length;
   const streak = computeStreak(history);
+  const today = getTodayString();
+  const totalWeeks = weeks.length;
 
-  // Build month label positions — track by month index to avoid duplicate letter issues
+  // Month labels: find the first week where a month starts
   const monthPositions: { col: number; month: number }[] = [];
   const seenMonths = new Set<number>();
-  for (let col = 0; col < 53; col++) {
-    const cellIndex = col * 7;
-    if (cellIndex >= cells.length) break;
-    const cell = cells[cellIndex];
-    if (cell.getFullYear() === year) {
-      const month = cell.getMonth();
-      if (!seenMonths.has(month)) {
-        seenMonths.add(month);
-        monthPositions.push({ col, month });
+  for (let w = 0; w < totalWeeks; w++) {
+    for (const day of weeks[w].days) {
+      if (day && day.getFullYear() === year && !seenMonths.has(day.getMonth())) {
+        seenMonths.add(day.getMonth());
+        monthPositions.push({ col: w, month: day.getMonth() });
+        break;
       }
     }
   }
@@ -127,57 +154,64 @@ function DotGrid({ habit, history }: { habit: Habit; history: HabitHistoryEntry[
         className="mb-1"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(53, 1fr)",
+          gridTemplateColumns: `repeat(${totalWeeks}, 1fr)`,
           gap: "2px",
         }}
       >
-        {Array.from({ length: 53 }, (_, col) => {
+        {Array.from({ length: totalWeeks }, (_, col) => {
           const mp = monthPositions.find((m) => m.col === col);
           return (
-            <div
-              key={col}
-              className="text-[9px] font-medium text-muted-foreground overflow-hidden"
-            >
+            <div key={col} className="text-[9px] font-medium text-muted-foreground overflow-hidden">
               {mp ? MONTH_LABELS[mp.month] : ""}
             </div>
           );
         })}
       </div>
 
-      {/* Grid: 7 rows x 53 cols, responsive width */}
+      {/* Grid: columns=weeks, rows=days(0=Sun…6=Sat) */}
+      {/* Each week is a column; within each week cells flow top-to-bottom (Sun→Sat) */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(53, 1fr)",
+          gridTemplateColumns: `repeat(${totalWeeks}, 1fr)`,
           gridTemplateRows: "repeat(7, 1fr)",
           gap: "2px",
-          gridAutoFlow: "column",
-          aspectRatio: "53 / 7",
+          aspectRatio: `${totalWeeks} / 7`,
         }}
       >
-        {cells.map((cell, i) => {
-          const key = dateToKey(cell);
-          const isThisYear = cell.getFullYear() === year;
-          const done = isThisYear && completedSet.has(key);
-          const isToday = key === getTodayString();
-
-          return (
-            <div
-              key={i}
-              title={key}
-              style={{
-                borderRadius: 2,
-                backgroundColor: !isThisYear
-                  ? "transparent"
-                  : done
-                    ? habit.color
-                    : `${habit.color}1a`,
-                outline: isToday ? `2px solid ${habit.color}` : undefined,
-                outlineOffset: isToday ? "1px" : undefined,
-              }}
-            />
-          );
-        })}
+        {weeks.map((week) =>
+          week.days.map((day, dayIdx) => {
+            // Place each cell explicitly: row = dayIdx+1, col = weekIndex+1
+            if (!day) {
+              return (
+                <div
+                  key={`${week.weekIndex}-${dayIdx}`}
+                  style={{
+                    gridColumn: week.weekIndex + 1,
+                    gridRow: dayIdx + 1,
+                  }}
+                />
+              );
+            }
+            const key = dateToKey(day);
+            const done = completedSet.has(key);
+            const isToday = key === today;
+            return (
+              <div
+                key={`${week.weekIndex}-${dayIdx}`}
+                title={`${key}${done ? " (done)" : ""}`}
+                style={{
+                  gridColumn: week.weekIndex + 1,
+                  gridRow: dayIdx + 1,
+                  borderRadius: 2,
+                  backgroundColor: done ? habit.color : `${habit.color}1a`,
+                  outline: isToday ? `2px solid ${habit.color}` : undefined,
+                  outlineOffset: isToday ? "1px" : undefined,
+                }}
+              />
+            );
+          })
+        )}
       </div>
 
       {/* Stats below grid */}
@@ -204,11 +238,13 @@ function HabitRow({
   checkedToday,
   onCheckIn,
   onDelete,
+  refreshKey,
 }: {
   habit: Habit;
   checkedToday: boolean;
   onCheckIn: (id: string) => void;
   onDelete: (id: string) => void;
+  refreshKey: number;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [history, setHistory] = useState<HabitHistoryEntry[] | null>(null);
@@ -216,21 +252,28 @@ function HabitRow({
 
   const streak = history ? computeStreak(history) : null;
 
-  const handleExpand = useCallback(async () => {
-    const next = !expanded;
-    setExpanded(next);
-    if (next && history === null) {
-      setLoadingHistory(true);
-      try {
-        const data = await getHabitHistory(habit.id, new Date().getFullYear());
-        setHistory(data);
-      } catch {
-        setHistory([]);
-      } finally {
-        setLoadingHistory(false);
-      }
+  const fetchHistory = useCallback(async () => {
+    setLoadingHistory(true);
+    try {
+      const data = await getHabitHistory(habit.id, new Date().getFullYear());
+      setHistory(data);
+    } catch {
+      setHistory([]);
+    } finally {
+      setLoadingHistory(false);
     }
-  }, [expanded, history, habit.id]);
+  }, [habit.id]);
+
+  // Re-fetch history when expanded or when refreshKey increments (after check-in)
+  useEffect(() => {
+    if (expanded) {
+      fetchHistory();
+    }
+  }, [expanded, refreshKey, fetchHistory]);
+
+  const handleExpand = useCallback(() => {
+    setExpanded((prev) => !prev);
+  }, []);
 
   const cadenceBadgeColor: Record<string, string> = {
     daily: "bg-blue-500/10 text-blue-400",
@@ -468,6 +511,7 @@ export default function HabitsPage() {
   const { user, isLoading } = useAuth();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [checkedToday, setCheckedToday] = useState<Set<string>>(new Set());
+  const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
   const [fetching, setFetching] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -477,21 +521,43 @@ export default function HabitsPage() {
   useEffect(() => {
     if (!isLoading && user) {
       getHabits()
-        .then((data) => setHabits(data))
+        .then(async (data) => {
+          setHabits(data);
+          // Check which habits are already checked in today
+          const today = getTodayString();
+          const checked = new Set<string>();
+          for (const habit of data) {
+            try {
+              const history = await getHabitHistory(habit.id, new Date().getFullYear());
+              if (history.some((e) => e.date === today && e.completed)) {
+                checked.add(habit.id);
+              }
+            } catch { /* ignore */ }
+          }
+          setCheckedToday(checked);
+        })
         .catch(() => toast.error("Could not load habits."))
         .finally(() => setFetching(false));
     }
   }, [isLoading, user]);
 
   async function handleCheckIn(id: string) {
-    if (checkedToday.has(id)) return;
+    const isChecked = checkedToday.has(id);
+    if (isChecked) {
+      if (!window.confirm("Undo today's check-in? You'll lose the rupees earned.")) return;
+    }
     try {
       await checkInHabit(id);
-      setCheckedToday((prev) => new Set([...prev, id]));
       const habit = habits.find((h) => h.id === id);
-      toast.success(
-        `Checked in${habit ? ` · ${habit.name}` : ""}! +${habit?.reward_amount ?? 1} rupee`
-      );
+      if (isChecked) {
+        setCheckedToday((prev) => { const next = new Set(prev); next.delete(id); return next; });
+        toast("Check-in undone", { description: habit?.name });
+      } else {
+        setCheckedToday((prev) => new Set([...prev, id]));
+        toast.success(`Checked in · ${habit?.name ?? ""}! +${habit?.reward_amount ?? 1} rupee`);
+      }
+      // Bump refreshKey so expanded HabitRow re-fetches history
+      setRefreshKeys((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
     } catch {
       toast.error("Check-in failed. Try again.");
     }
@@ -535,6 +601,9 @@ export default function HabitsPage() {
               <h1 className="mt-1 font-heading text-xl font-semibold tracking-tight">
                 Habit Tracker
               </h1>
+              <p className="mt-1 text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+                {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}
+              </p>
             </div>
             <Button size="sm" className="gap-1.5" onClick={() => setDialogOpen(true)}>
               <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
@@ -567,6 +636,7 @@ export default function HabitsPage() {
                     checkedToday={checkedToday.has(habit.id)}
                     onCheckIn={handleCheckIn}
                     onDelete={handleDelete}
+                    refreshKey={refreshKeys[habit.id] ?? 0}
                   />
                 ))}
               </div>

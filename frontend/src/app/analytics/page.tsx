@@ -46,9 +46,23 @@ function StatBlock({
   );
 }
 
-function formatMinutes(mins: number): string {
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
+// Parse ISO week string like "2026-W13" into the Monday of that week
+function formatISOWeek(isoWeek: string): string {
+  const match = isoWeek.match(/^(\d{4})-W(\d{2})$/);
+  if (!match) return isoWeek;
+  const year = parseInt(match[1], 10);
+  const week = parseInt(match[2], 10);
+  // Jan 4 is always in week 1 of the ISO year
+  const jan4 = new Date(year, 0, 4);
+  const monday = new Date(jan4);
+  monday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (week - 1) * 7);
+  return monday.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+
+function formatMinutes(mins: number | null | undefined): string {
+  const total = Math.max(0, Math.floor(mins ?? 0));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
   if (h === 0) return `${m}m`;
   if (m === 0) return `${h}h`;
   return `${h}h ${m}m`;
@@ -249,10 +263,7 @@ export default function AnalyticsPage() {
                         >
                           <div>
                             <p className="text-sm font-medium">
-                              Week of {new Date(w.week).toLocaleDateString("en-IN", {
-                                day: "numeric",
-                                month: "short",
-                              })}
+                              Week of {formatISOWeek(w.week)}
                             </p>
                             <p className="text-[11px] text-muted-foreground">
                               {w.sessions_count} session{w.sessions_count !== 1 ? "s" : ""}

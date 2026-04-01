@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { LayoutDashboard, BarChart3, Settings, Timer, Plus, Zap } from "lucide-react";
+import { LayoutDashboard, BarChart3, Settings, Timer, Plus, Zap, LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useAuth } from "@/lib/auth-context";
 
 type NavItem = "dashboard" | "habits" | "analytics" | "settings";
 
@@ -27,6 +28,7 @@ interface SidebarProps {
 export function Sidebar({ onNewTask }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { logout } = useAuth();
 
   function getActive(): NavItem {
     if (pathname.startsWith("/habits")) return "habits";
@@ -77,8 +79,15 @@ export function Sidebar({ onNewTask }: SidebarProps) {
         })}
       </nav>
 
-      {/* Theme toggle at bottom */}
+      {/* Bottom actions */}
       <ThemeToggle />
+      <button
+        onClick={() => logout()}
+        className="mt-1 flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+        title="Logout"
+      >
+        <LogOut className="h-[18px] w-[18px]" strokeWidth={1.5} />
+      </button>
     </aside>
   );
 }

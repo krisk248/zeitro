@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowLeft, Check, Trash2, Pencil, Copy, Coins, Flame, Calendar, Tag as TagIcon, FileText } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Sidebar } from "@/components/sidebar";
+import { BottomNav } from "@/components/bottom-nav";
+import { TopBar } from "@/components/top-bar";
 import { WorkSessionTracker } from "@/components/work-session-tracker";
 import { CreateTaskDialog } from "@/components/create-task-dialog";
 import { useAuth } from "@/lib/auth-context";
@@ -68,23 +71,40 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     }
   }
 
+  const balance = user?.currency_balance ?? 0;
+  const displayName = user?.display_name ?? "there";
+
   if (error) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <p className="text-sm text-muted-foreground">{error}</p>
+      <div className="flex h-screen overflow-hidden">
+        <Sidebar />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <TopBar currencyBalance={balance} userName={displayName} />
+          <main className="flex flex-1 items-center justify-center overflow-y-auto pb-16 md:pb-0">
+            <p className="text-sm text-muted-foreground">{error}</p>
+          </main>
+        </div>
+        <BottomNav />
       </div>
     );
   }
 
   if (!task) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="space-y-2 w-full max-w-2xl px-4 md:px-8">
-          <div className="h-6 w-1/3 rounded bg-secondary animate-pulse" />
-          <div className="h-8 w-2/3 rounded bg-secondary animate-pulse" />
-          <div className="h-px bg-border my-4" />
-          <div className="h-12 w-1/2 rounded bg-secondary animate-pulse" />
+      <div className="flex h-screen overflow-hidden">
+        <Sidebar />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <TopBar currencyBalance={balance} userName={displayName} />
+          <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
+            <div className="mx-auto max-w-2xl space-y-2 px-4 py-6 md:px-8">
+              <div className="h-6 w-1/3 rounded bg-secondary animate-pulse" />
+              <div className="h-8 w-2/3 rounded bg-secondary animate-pulse" />
+              <div className="h-px bg-border my-4" />
+              <div className="h-12 w-1/2 rounded bg-secondary animate-pulse" />
+            </div>
+          </main>
         </div>
+        <BottomNav />
       </div>
     );
   }
@@ -92,6 +112,11 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   const time = calculateTimeRemaining(task.deadline);
 
   return (
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <TopBar currencyBalance={balance} userName={displayName} />
+        <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
     <div className="mx-auto max-w-2xl px-4 py-6 md:px-8">
       {/* Back button */}
       <button
@@ -251,6 +276,10 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
         task={task}
         onCreated={load}
       />
+    </div>
+        </main>
+      </div>
+      <BottomNav />
     </div>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { Timer, Plus, Coins } from "lucide-react";
+import { Timer, Plus, Coins, LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useAuth } from "@/lib/auth-context";
 
 interface TopBarProps {
   currencyBalance: number;
@@ -10,6 +11,7 @@ interface TopBarProps {
 }
 
 export function TopBar({ currencyBalance, userName, onNewTask }: TopBarProps) {
+  const { logout } = useAuth();
   const initial = userName.charAt(0).toUpperCase();
 
   return (
@@ -47,6 +49,15 @@ export function TopBar({ currencyBalance, userName, onNewTask }: TopBarProps) {
         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-muted-foreground">
           {initial}
         </div>
+
+        {/* Logout */}
+        <button
+          onClick={() => logout()}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          title="Logout"
+        >
+          <LogOut className="h-3.5 w-3.5" strokeWidth={1.5} />
+        </button>
       </div>
     </header>
   );

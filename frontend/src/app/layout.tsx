@@ -22,6 +22,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Zeitro - Gamified Task Countdown",
   description: "Track deadlines, log work sessions, earn rewards. A gamified countdown task tracker.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

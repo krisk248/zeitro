@@ -78,9 +78,20 @@ async def delete_habit(habit_id: uuid.UUID, session: SessionDep, user: UserDep) 
 
 
 @router.post("/{habit_id}/check", response_model=HabitEntryRead)
-async def check_habit(habit_id: uuid.UUID, session: SessionDep, user: UserDep) -> HabitEntry:
+async def check_habit(
+    habit_id: uuid.UUID,
+    session: SessionDep,
+    user: UserDep,
+    client_date: str | None = Query(default=None, description="Client's local date YYYY-MM-DD"),
+) -> HabitEntry:
     habit = await get_habit_or_404(habit_id, user, session)
-    today = date.today()
+    if client_date:
+        try:
+            today = date.fromisoformat(client_date)
+        except ValueError:
+            today = date.today()
+    else:
+        today = date.today()
 
     existing_result = await session.execute(
         select(HabitEntry).where(

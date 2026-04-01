@@ -93,9 +93,15 @@ jobs:
             type=raw,value=latest
             type=sha,prefix=
 
+      - name: Generate build ID
+        id: build_id
+        run: echo "id=$(date -u +'%Y.%m.%d.%H.%M')" >> $GITHUB_OUTPUT
+
       - uses: docker/build-push-action@v6
         with:
           context: ./frontend
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_BUILD_ID=${{ steps.build_id.outputs.id }}

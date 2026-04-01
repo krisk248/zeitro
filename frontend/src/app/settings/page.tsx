@@ -465,6 +465,27 @@ export default function SettingsPage() {
               </div>
             </section>
 
+            <Separator className="my-6" />
+
+            {/* About section */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  About
+                </p>
+              </div>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <div className="flex items-center justify-between">
+                  <span>Version</span>
+                  <span className="font-mono text-xs countdown-digits">v1.0.0</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Build</span>
+                  <span className="font-mono text-xs countdown-digits">{process.env.NEXT_PUBLIC_BUILD_ID ?? "dev"}</span>
+                </div>
+              </div>
+            </section>
+
             <div className="h-8" />
           </div>
         </main>

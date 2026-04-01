@@ -259,7 +259,9 @@ export function deleteHabit(id: string): Promise<void> {
 }
 
 export function checkInHabit(id: string): Promise<HabitEntry> {
-  return api.post<HabitEntry>(`/api/v1/habits/${id}/check`);
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  return api.post<HabitEntry>(`/api/v1/habits/${id}/check?client_date=${dateStr}`);
 }
 
 export async function getHabitHistory(id: string, year: number): Promise<HabitHistoryEntry[]> {
