@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/lib/auth-context";
@@ -20,11 +20,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Zeitro - Gamified Task Countdown",
-  description: "Track deadlines, log work sessions, earn rewards. A gamified countdown task tracker.",
+  title: "Zeitro",
+  description: "Gamified countdown task tracker",
+  manifest: "/manifest.json",
   icons: {
     icon: "/favicon.svg",
+    apple: "/icons/icon-192.svg",
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Zeitro",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#09090B",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
