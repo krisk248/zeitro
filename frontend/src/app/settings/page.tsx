@@ -659,7 +659,7 @@ export default function SettingsPage() {
                   About
                 </p>
               </div>
-              <div className="space-y-2 text-sm text-muted-foreground">
+              <div className="space-y-3 text-sm text-muted-foreground">
                 <div className="flex items-center justify-between">
                   <span>Version</span>
                   <span className="font-mono text-xs countdown-digits">v1.0.0</span>
@@ -668,6 +668,13 @@ export default function SettingsPage() {
                   <span>Build</span>
                   <span className="font-mono text-xs countdown-digits">{process.env.NEXT_PUBLIC_BUILD_ID ?? "dev"}</span>
                 </div>
+                <button
+                  onClick={() => router.push("/about")}
+                  className="flex w-full items-center justify-between rounded-lg border border-border px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary/50"
+                >
+                  <span>About Zeitro</span>
+                  <ArrowLeft className="h-4 w-4 rotate-180 text-muted-foreground" />
+                </button>
               </div>
             </section>
 
