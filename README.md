@@ -1,19 +1,41 @@
 # Zeitro
 
-A gamified countdown task tracker that uses T-minus psychology to drive task completion.
+> **Zeit** *(German: time)* + **Hero** *(English)* = **Zeitro** — *become the hero of your own time.*
 
-## The Idea
+A gamified countdown task tracker that weaponizes Parkinson's Law against itself.
 
-Most task managers show deadlines as static dates. Zeitro flips this — every task has a **live T-minus countdown** ticking backwards in real time. Watching `T- 1d 23h 04m 30s` shrink creates urgency that a calendar date never will.
+## Why Zeitro Exists
 
-### Why T-Minus Works
+### Parkinson's Law
 
-The countdown timer exploits several cognitive biases that make us better at finishing things:
+> *"Work expands so as to fill the time available for its completion."*
+> — C. Northcote Parkinson, 1955
 
-- **Loss aversion** — Watching time disappear triggers the same response as losing money. You act faster when something is being taken away than when something is being offered.
-- **Zeigarnik effect** — Unfinished tasks with visible countdowns create mental tension. Your brain wants to close the loop.
-- **Temporal discounting** — We underestimate future deadlines ("I have 3 days"). A live counter saying `T- 2d 23h 59m 42s` makes "3 days" feel real.
-- **Gamification** — Earning virtual currency for completing tasks and losing it for missing deadlines adds stakes. Even fake money triggers dopamine.
+Give yourself a week to write a report that takes two hours, and you'll spend the full week on it. The task doesn't get better — it just takes longer. You overthink, procrastinate, and fill the extra time with low-value work.
+
+This isn't laziness. It's how the human brain works. Without a visible, ticking constraint, there's no urgency signal. Your brain treats distant deadlines as abstract — *"I still have time"* — until suddenly you don't.
+
+### The T-Minus Solution
+
+Most task managers show deadlines as static dates. **"Due Friday"** feels the same on Monday and Thursday until panic hits.
+
+Zeitro flips this. Every task has a **live T-minus countdown** ticking backwards in real time. Watching `T- 1d 23h 04m 30s` shrink creates urgency that a calendar date never will. This exploits several cognitive mechanisms:
+
+| Mechanism | How Zeitro Uses It |
+|---|---|
+| **Loss aversion** | Watching time disappear triggers the same response as losing money. You act faster when something is being taken away. |
+| **Zeigarnik effect** | Unfinished tasks with visible countdowns create mental tension. Your brain wants to close the loop. |
+| **Temporal discounting** | A live counter saying `T- 2d 23h 59m 42s` makes "3 days" feel real instead of abstract. |
+| **Gamification** | Earning virtual currency for completing tasks and losing it for missing deadlines adds stakes. Even fake money triggers dopamine. |
+| **Parkinson's counter** | A visible countdown compresses perceived time. You can't expand work to fill the time when you can see the time shrinking. |
+
+### How Zeitro Fights Parkinson's Law
+
+1. **Live countdown, not static dates** — Every task shows a T-minus timer ticking in real time. "Due Friday" becomes `T- 2d 14h 30m 12s` — and it's shrinking.
+2. **Financial stakes (even fake ones)** — Earn rupees for completing tasks on time. Lose them every 12 hours when overdue. Fake stakes, real motivation.
+3. **Visible work logging** — Hit play when you work, stop when you pause. See exactly how many hours you've invested — making sunk cost work in your favor.
+4. **Tighter feedback loops** — Habits get daily check-ins. Tasks get countdowns. Analytics show patterns. The shorter the loop, the harder it is for Parkinson's Law to operate.
+5. **Pomodoro focus blocks** — 25-minute sprints with a visible circular timer. You can't expand work to fill the time when the time is 25 minutes and counting.
 
 This isn't a theory project. It's a tool built to solve a personal problem: finishing things on time.
 
@@ -33,6 +55,8 @@ This isn't a theory project. It's a tool built to solve a personal problem: fini
 - **Settings** — Edit profile, change password, export data, delete account
 - **Auth** — User accounts with JWT cookie-based authentication
 - **Dark/light mode** — Toggle between themes, preference saved to server
+- **Grid & list view** — Toggle between card grid and compact list on dashboard
+- **PWA** — Installable on Android and desktop, works offline for cached data
 - **Responsive** — Works on desktop, tablet, and mobile
 - **API-first** — Full REST API, frontend is decoupled from backend
 - **Dockerized** — Single `docker compose up` runs everything
