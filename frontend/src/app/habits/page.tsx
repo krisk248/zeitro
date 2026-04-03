@@ -13,6 +13,7 @@ import {
   deleteHabit,
   checkInHabit,
   getHabitHistory,
+  checkMissedHabits,
 } from "@/lib/api";
 import type { Habit, HabitHistoryEntry } from "@/types/task";
 import {
@@ -111,6 +112,13 @@ function computeStreak(history: HabitHistoryEntry[]): number {
   const today = new Date();
   let streak = 0;
   const cur = new Date(today);
+
+  // If today is checked, count it and go backwards
+  // If today is NOT checked, start from yesterday
+  if (!completed.has(dateToKey(cur))) {
+    cur.setDate(cur.getDate() - 1);
+  }
+
   while (true) {
     const key = dateToKey(cur);
     if (completed.has(key)) {
@@ -239,30 +247,35 @@ function HabitRow({
   onCheckIn,
   onDelete,
   refreshKey,
+  initialStreak,
+  onStreakUpdate,
 }: {
   habit: Habit;
   checkedToday: boolean;
   onCheckIn: (id: string) => void;
   onDelete: (id: string) => void;
   refreshKey: number;
+  initialStreak: number;
+  onStreakUpdate: (id: string, streak: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [history, setHistory] = useState<HabitHistoryEntry[] | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  const streak = history ? computeStreak(history) : null;
+  const streak = history ? computeStreak(history) : initialStreak;
 
   const fetchHistory = useCallback(async () => {
     setLoadingHistory(true);
     try {
       const data = await getHabitHistory(habit.id, new Date().getFullYear());
       setHistory(data);
+      onStreakUpdate(habit.id, computeStreak(data));
     } catch {
       setHistory([]);
     } finally {
       setLoadingHistory(false);
     }
-  }, [habit.id]);
+  }, [habit.id, onStreakUpdate]);
 
   // Re-fetch history when expanded or when refreshKey increments (after check-in)
   useEffect(() => {
@@ -508,9 +521,10 @@ function CreateHabitDialog({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function HabitsPage() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, refreshUser } = useAuth();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [checkedToday, setCheckedToday] = useState<Set<string>>(new Set());
+  const [streaks, setStreaks] = useState<Record<string, number>>({});
   const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
   const [fetching, setFetching] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -523,18 +537,31 @@ export default function HabitsPage() {
       getHabits()
         .then(async (data) => {
           setHabits(data);
-          // Check which habits are already checked in today
           const today = getTodayString();
           const checked = new Set<string>();
+          const streakMap: Record<string, number> = {};
           for (const habit of data) {
             try {
               const history = await getHabitHistory(habit.id, new Date().getFullYear());
               if (history.some((e) => e.date === today && e.completed)) {
                 checked.add(habit.id);
               }
+              streakMap[habit.id] = computeStreak(history);
             } catch { /* ignore */ }
           }
           setCheckedToday(checked);
+          setStreaks(streakMap);
+
+          // Check for missed habits and apply penalties
+          try {
+            const missed = await checkMissedHabits();
+            if (missed.total_penalty > 0) {
+              for (const d of missed.details) {
+                toast.warning(`Missed ${d.missed_days} day(s) of ${d.habit}. -${d.penalty} rupees`);
+              }
+              refreshUser?.();
+            }
+          } catch { /* ignore */ }
         })
         .catch(() => toast.error("Could not load habits."))
         .finally(() => setFetching(false));
@@ -558,6 +585,12 @@ export default function HabitsPage() {
       }
       // Bump refreshKey so expanded HabitRow re-fetches history
       setRefreshKeys((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+      // Update streak eagerly
+      try {
+        const history = await getHabitHistory(id, new Date().getFullYear());
+        setStreaks((prev) => ({ ...prev, [id]: computeStreak(history) }));
+      } catch { /* ignore */ }
+      refreshUser?.();
     } catch {
       toast.error("Check-in failed. Try again.");
     }
@@ -637,6 +670,8 @@ export default function HabitsPage() {
                     onCheckIn={handleCheckIn}
                     onDelete={handleDelete}
                     refreshKey={refreshKeys[habit.id] ?? 0}
+                    initialStreak={streaks[habit.id] ?? 0}
+                    onStreakUpdate={(id, s) => setStreaks((prev) => ({ ...prev, [id]: s }))}
                   />
                 ))}
               </div>

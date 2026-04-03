@@ -262,10 +262,22 @@ export function deleteHabit(id: string): Promise<void> {
   return api.delete<void>(`/api/v1/habits/${id}`);
 }
 
+function getLocalDateStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export function checkInHabit(id: string): Promise<HabitEntry> {
-  const today = new Date();
-  const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  return api.post<HabitEntry>(`/api/v1/habits/${id}/check?client_date=${dateStr}`);
+  return api.post<HabitEntry>(`/api/v1/habits/${id}/check?client_date=${getLocalDateStr()}`);
+}
+
+export interface MissedHabitsResult {
+  total_penalty: number;
+  details: { habit: string; missed_days: number; penalty: number }[];
+}
+
+export function checkMissedHabits(): Promise<MissedHabitsResult> {
+  return api.post<MissedHabitsResult>(`/api/v1/habits/check-missed?client_date=${getLocalDateStr()}`);
 }
 
 export async function getHabitHistory(id: string, year: number): Promise<HabitHistoryEntry[]> {

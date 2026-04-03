@@ -147,6 +147,75 @@ async def check_habit(
     return entry
 
 
+@router.post("/check-missed")
+async def check_missed_habits(
+    session: SessionDep,
+    user: UserDep,
+    client_date: str | None = Query(default=None),
+) -> dict:
+    if client_date:
+        try:
+            today = date.fromisoformat(client_date)
+        except ValueError:
+            today = date.today()
+    else:
+        today = date.today()
+
+    from datetime import timedelta
+
+    habits_result = await session.execute(
+        select(Habit).where(Habit.user_id == user.id, Habit.is_active == True)  # noqa: E712
+    )
+    habits = habits_result.scalars().all()
+
+    db_user = await session.get(User, user.id)
+    total_penalty = 0
+    missed_details = []
+
+    for habit in habits:
+        if habit.cadence != "daily":
+            continue
+
+        entries_result = await session.execute(
+            select(HabitEntry.date).where(
+                HabitEntry.habit_id == habit.id,
+                HabitEntry.completed == True,  # noqa: E712
+            )
+        )
+        completed_dates = {row[0] for row in entries_result.all()}
+
+        habit_start = habit.created_at.date() if habit.created_at else today
+        check_from = max(habit_start, today - timedelta(days=7))
+        yesterday = today - timedelta(days=1)
+
+        missed_days = 0
+        cur = check_from
+        while cur <= yesterday:
+            if cur not in completed_dates:
+                missed_days += 1
+            cur += timedelta(days=1)
+
+        if missed_days > 0 and habit.reward_amount > 0:
+            penalty = missed_days * habit.reward_amount
+            actual = min(penalty, db_user.currency_balance)
+            if actual > 0:
+                db_user.currency_balance -= actual
+                tx = CurrencyTransaction(
+                    user_id=user.id,
+                    amount=-actual,
+                    transaction_type=TransactionType.manual_adjustment,
+                    description=f"Missed {missed_days}d: {habit.name}",
+                )
+                session.add(tx)
+                total_penalty += actual
+                missed_details.append({"habit": habit.name, "missed_days": missed_days, "penalty": actual})
+
+    if total_penalty > 0:
+        await session.commit()
+
+    return {"total_penalty": total_penalty, "details": missed_details}
+
+
 @router.get("/{habit_id}/history", response_model=HabitHistory)
 async def get_habit_history(
     habit_id: uuid.UUID,
