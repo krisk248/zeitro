@@ -267,8 +267,9 @@ function getLocalDateStr(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export function checkInHabit(id: string): Promise<HabitEntry> {
-  return api.post<HabitEntry>(`/api/v1/habits/${id}/check?client_date=${getLocalDateStr()}`);
+export function checkInHabit(id: string, dateOverride?: string): Promise<HabitEntry> {
+  const dateStr = dateOverride ?? getLocalDateStr();
+  return api.post<HabitEntry>(`/api/v1/habits/${id}/check?client_date=${dateStr}`);
 }
 
 export interface MissedHabitsResult {

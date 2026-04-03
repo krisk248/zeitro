@@ -133,7 +133,7 @@ function computeStreak(history: HabitHistoryEntry[]): number {
 
 // ─── Dot Grid ─────────────────────────────────────────────────────────────────
 
-function DotGrid({ habit, history }: { habit: Habit; history: HabitHistoryEntry[] }) {
+function DotGrid({ habit, history, onBackfill }: { habit: Habit; history: HabitHistoryEntry[]; onBackfill?: (date: string) => void }) {
   const year = new Date().getFullYear();
   const weeks = buildYearGrid(year);
   const completedSet = new Set(history.filter((h) => h.completed).map((h) => h.date));
@@ -204,10 +204,13 @@ function DotGrid({ habit, history }: { habit: Habit; history: HabitHistoryEntry[
             const key = dateToKey(day);
             const done = completedSet.has(key);
             const isToday = key === today;
+            const isPast = key < today;
+            const canBackfill = isPast && !done && onBackfill;
             return (
               <div
                 key={`${week.weekIndex}-${dayIdx}`}
-                title={`${key}${done ? " (done)" : ""}`}
+                title={`${key}${done ? " (done)" : isPast && !done ? " (click to backfill)" : ""}`}
+                onClick={canBackfill ? () => onBackfill(key) : undefined}
                 style={{
                   gridColumn: week.weekIndex + 1,
                   gridRow: dayIdx + 1,
@@ -215,6 +218,7 @@ function DotGrid({ habit, history }: { habit: Habit; history: HabitHistoryEntry[
                   backgroundColor: done ? habit.color : `${habit.color}1a`,
                   outline: isToday ? `2px solid ${habit.color}` : undefined,
                   outlineOffset: isToday ? "1px" : undefined,
+                  cursor: canBackfill ? "pointer" : undefined,
                 }}
               />
             );
@@ -370,7 +374,21 @@ function HabitRow({
               Loading…
             </div>
           ) : history !== null ? (
-            <DotGrid habit={habit} history={history} />
+            <DotGrid
+              habit={habit}
+              history={history}
+              onBackfill={async (dateStr) => {
+                const cost = habit.reward_amount;
+                if (!window.confirm(`Mark ${dateStr} as done?\n\nThis costs ${cost} rupee${cost !== 1 ? "s" : ""} as a late penalty.`)) return;
+                try {
+                  await checkInHabit(habit.id, dateStr);
+                  toast.success(`Backfilled ${dateStr} · -${cost} rupee${cost !== 1 ? "s" : ""}`);
+                  fetchHistory();
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : "Backfill failed.");
+                }
+              }}
+            />
           ) : null}
         </div>
       )}

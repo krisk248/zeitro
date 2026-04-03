@@ -85,25 +85,39 @@ async def check_habit(
     client_date: str | None = Query(default=None, description="Client's local date YYYY-MM-DD"),
 ) -> HabitEntry:
     habit = await get_habit_or_404(habit_id, user, session)
+
+    today = date.today()
+    target_date = today
     if client_date:
         try:
-            today = date.fromisoformat(client_date)
+            target_date = date.fromisoformat(client_date)
         except ValueError:
-            today = date.today()
-    else:
-        today = date.today()
+            target_date = today
+
+    # Block future dates
+    if target_date > today:
+        raise HTTPException(status_code=400, detail="Cannot check in for a future date.")
+
+    is_past = target_date < today
 
     existing_result = await session.execute(
         select(HabitEntry).where(
             HabitEntry.habit_id == habit_id,
-            HabitEntry.date == today,
+            HabitEntry.date == target_date,
         )
     )
     existing = existing_result.scalar_one_or_none()
 
     db_user = await session.get(User, user.id)
 
+    # Past date that's already checked - no toggle allowed
+    if existing and existing.completed and is_past:
+        return existing
+
     if existing:
+        # Toggle only allowed for today
+        if is_past:
+            raise HTTPException(status_code=400, detail="Cannot uncheck a past date.")
         existing.completed = not existing.completed
         if existing.completed:
             db_user.currency_balance += habit.reward_amount
@@ -128,20 +142,37 @@ async def check_habit(
         await session.refresh(existing)
         return existing
 
+    # New entry
     entry = HabitEntry(
         habit_id=habit_id,
-        date=today,
+        date=target_date,
         completed=True,
     )
     session.add(entry)
-    db_user.currency_balance += habit.reward_amount
-    tx = CurrencyTransaction(
-        user_id=user.id,
-        amount=habit.reward_amount,
-        transaction_type=TransactionType.bonus,
-        description=f"Habit check-in: {habit.name}",
-    )
-    session.add(tx)
+
+    if is_past:
+        # Late backfill: charge penalty (reward_amount as late fee)
+        penalty = min(habit.reward_amount, db_user.currency_balance)
+        if penalty > 0:
+            db_user.currency_balance -= penalty
+            tx = CurrencyTransaction(
+                user_id=user.id,
+                amount=-penalty,
+                transaction_type=TransactionType.manual_adjustment,
+                description=f"Late backfill ({target_date}): {habit.name}",
+            )
+            session.add(tx)
+    else:
+        # Today: normal reward
+        db_user.currency_balance += habit.reward_amount
+        tx = CurrencyTransaction(
+            user_id=user.id,
+            amount=habit.reward_amount,
+            transaction_type=TransactionType.bonus,
+            description=f"Habit check-in: {habit.name}",
+        )
+        session.add(tx)
+
     await session.commit()
     await session.refresh(entry)
     return entry

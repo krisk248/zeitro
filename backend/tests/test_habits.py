@@ -151,6 +151,101 @@ async def test_habit_history(auth_client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_check_past_date_succeeds(auth_client: AsyncClient):
+    create_resp = await auth_client.post(
+        "/api/v1/habits", json={"name": "Backfill Habit", "reward_amount": 3}
+    )
+    habit_id = create_resp.json()["id"]
+
+    resp = await auth_client.post(
+        f"/api/v1/habits/{habit_id}/check?client_date=2026-03-20"
+    )
+    assert resp.status_code == 200
+    assert resp.json()["completed"] is True
+    assert resp.json()["date"] == "2026-03-20"
+
+
+@pytest.mark.asyncio
+async def test_check_past_date_charges_penalty(auth_client: AsyncClient):
+    summary_before = await auth_client.get("/api/v1/analytics/summary")
+    balance_before = summary_before.json()["current_balance"]
+
+    create_resp = await auth_client.post(
+        "/api/v1/habits", json={"name": "Penalty Backfill", "reward_amount": 5}
+    )
+    habit_id = create_resp.json()["id"]
+
+    await auth_client.post(
+        f"/api/v1/habits/{habit_id}/check?client_date=2026-03-15"
+    )
+
+    summary_after = await auth_client.get("/api/v1/analytics/summary")
+    balance_after = summary_after.json()["current_balance"]
+    # Past date costs penalty (reward_amount), no reward earned
+    assert balance_after == balance_before - 5
+
+
+@pytest.mark.asyncio
+async def test_check_future_date_rejected(auth_client: AsyncClient):
+    create_resp = await auth_client.post(
+        "/api/v1/habits", json={"name": "Future Habit"}
+    )
+    habit_id = create_resp.json()["id"]
+
+    resp = await auth_client.post(
+        f"/api/v1/habits/{habit_id}/check?client_date=2027-01-01"
+    )
+    assert resp.status_code == 400
+    assert "future" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_check_today_no_penalty(auth_client: AsyncClient):
+    summary_before = await auth_client.get("/api/v1/analytics/summary")
+    balance_before = summary_before.json()["current_balance"]
+
+    create_resp = await auth_client.post(
+        "/api/v1/habits", json={"name": "Today No Penalty", "reward_amount": 4}
+    )
+    habit_id = create_resp.json()["id"]
+
+    # Check in for today (no client_date = today)
+    await auth_client.post(f"/api/v1/habits/{habit_id}/check")
+
+    summary_after = await auth_client.get("/api/v1/analytics/summary")
+    balance_after = summary_after.json()["current_balance"]
+    # Today earns reward, no penalty
+    assert balance_after == balance_before + 4
+
+
+@pytest.mark.asyncio
+async def test_check_past_already_checked_idempotent(auth_client: AsyncClient):
+    create_resp = await auth_client.post(
+        "/api/v1/habits", json={"name": "Idempotent Past", "reward_amount": 2}
+    )
+    habit_id = create_resp.json()["id"]
+
+    # First backfill
+    resp1 = await auth_client.post(
+        f"/api/v1/habits/{habit_id}/check?client_date=2026-03-10"
+    )
+    assert resp1.json()["completed"] is True
+
+    summary_mid = await auth_client.get("/api/v1/analytics/summary")
+    balance_mid = summary_mid.json()["current_balance"]
+
+    # Second backfill same date - should not charge again
+    resp2 = await auth_client.post(
+        f"/api/v1/habits/{habit_id}/check?client_date=2026-03-10"
+    )
+    assert resp2.json()["completed"] is True
+
+    summary_after = await auth_client.get("/api/v1/analytics/summary")
+    balance_after = summary_after.json()["current_balance"]
+    assert balance_after == balance_mid  # No additional charge
+
+
+@pytest.mark.asyncio
 async def test_habits_unauthorized(client: AsyncClient):
     resp = await client.get("/api/v1/habits")
     assert resp.status_code == 401
