@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Zap, Plus, Flame, Check, Calendar, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Sidebar } from "@/components/sidebar";
@@ -263,26 +263,29 @@ function HabitRow({
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   const streak = history ? computeStreak(history) : initialStreak;
+  const onStreakUpdateRef = useRef(onStreakUpdate);
+  onStreakUpdateRef.current = onStreakUpdate;
 
   const fetchHistory = useCallback(async () => {
     setLoadingHistory(true);
     try {
       const data = await getHabitHistory(habit.id, new Date().getFullYear());
       setHistory(data);
-      onStreakUpdate(habit.id, computeStreak(data));
+      onStreakUpdateRef.current(habit.id, computeStreak(data));
     } catch {
       setHistory([]);
     } finally {
       setLoadingHistory(false);
     }
-  }, [habit.id, onStreakUpdate]);
+  }, [habit.id]);
 
   // Re-fetch history when expanded or when refreshKey increments (after check-in)
   useEffect(() => {
-    if (expanded) {
+    if (expanded || refreshKey > 0) {
       fetchHistory();
     }
-  }, [expanded, refreshKey, fetchHistory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expanded, refreshKey]);
 
   const handleExpand = useCallback(() => {
     setExpanded((prev) => !prev);
