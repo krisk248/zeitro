@@ -5,6 +5,8 @@ export const handle: Handle = async ({ event, resolve }) => {
     const apiUrl = process.env.INTERNAL_API_URL ?? 'http://localhost:8001';
     const headers = new Headers(event.request.headers);
     headers.delete('host');
+    const clientIp = event.getClientAddress();
+    if (clientIp) headers.set('x-forwarded-for', clientIp);
 
     const resp = await fetch(`${apiUrl}${event.url.pathname}${event.url.search}`, {
       method: event.request.method,

@@ -16,7 +16,7 @@ from app.db.engine import engine
 from app.routers import account, analytics, habits, sessions, stream, tags, tasks
 
 rate_limit_store: dict[str, list[float]] = defaultdict(list)
-AUTH_RATE_LIMIT = 10
+AUTH_RATE_LIMIT = 30
 AUTH_RATE_WINDOW = 60
 
 
@@ -53,7 +53,7 @@ async def rate_limit_auth(request: Request, call_next):
     if os.environ.get("DISABLE_RATE_LIMIT") == "true":
         return await call_next(request)
     if request.url.path.startswith(f"{settings.API_PREFIX}/auth/"):
-        client_ip = request.client.host if request.client else "unknown"
+        client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown").split(",")[0].strip()
         now = time.time()
         timestamps = rate_limit_store[client_ip]
         rate_limit_store[client_ip] = [t for t in timestamps if now - t < AUTH_RATE_WINDOW]
