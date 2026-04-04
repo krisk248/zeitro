@@ -61,17 +61,19 @@ This isn't a theory project. It's a tool built to solve a personal problem: fini
 - **API-first** — Full REST API, frontend is decoupled from backend
 - **Dockerized** — Single `docker compose up` runs everything
 
+- **Habit backfill** — Click past dates in the dot grid to mark as done (with late penalty)
+- **Missed habit penalties** — Auto-deduct currency for missed daily habits
+
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 16 (App Router), React 19 |
-| UI | shadcn/ui, Tailwind CSS v4, Lucide icons |
+| Frontend | SvelteKit 5 (Svelte 5 runes) |
+| UI | Tailwind CSS v4, Lucide-svelte, sonner-svelte |
 | Backend | Python FastAPI, Uvicorn |
 | Database | SQLite + WAL mode |
 | ORM | SQLAlchemy 2.0 async + aiosqlite |
 | Auth | fastapi-users (JWT cookies) |
-| Real-time | Server-Sent Events |
 | Containerization | Docker Compose |
 
 ## Getting Started
@@ -107,24 +109,19 @@ uv run alembic upgrade head                # create database
 uv run uvicorn app.main:app --reload       # start API on :8000
 ```
 
-#### Frontend
+#### Frontend (SvelteKit)
 
 ```bash
-cd frontend
+cd frontend-svelte
 npm install                                # install dependencies
-npm run dev                                # start on :3000
-```
-
-Create a `.env.local` in `frontend/`:
-```
-NEXT_PUBLIC_API_URL=http://localhost:8000
+INTERNAL_API_URL=http://localhost:8000 npm run dev  # start on :5173
 ```
 
 ### Running Tests
 
 ```bash
 cd backend
-uv run pytest tests/ -v                    # 75 tests
+uv run pytest tests/ -v                    # 80 tests
 ```
 
 ## Project Structure
@@ -142,13 +139,14 @@ zeitro/
 │   ├── alembic/                # Database migrations
 │   ├── tests/                  # pytest test suite
 │   └── Dockerfile
-├── frontend/                   # Next.js application
+├── frontend-svelte/            # SvelteKit application (primary)
 │   ├── src/
-│   │   ├── app/                # Pages (dashboard, auth, analytics, habits, settings, task detail)
-│   │   ├── components/         # UI components
-│   │   ├── lib/                # API client, auth context, utilities
-│   │   └── types/              # TypeScript types
+│   │   ├── routes/             # Pages (dashboard, auth, analytics, habits, settings, task detail, about)
+│   │   ├── lib/components/     # UI components
+│   │   ├── lib/                # API client, auth store, utilities
+│   │   └── hooks.server.ts     # API proxy
 │   └── Dockerfile
+├── frontend/                   # Next.js application (frozen, legacy)
 ├── docker-compose.yml          # Container orchestration
 ├── design.md                   # Design system tokens and guidelines
 └── CONTEXT.md                  # AI coding context (for vibe coding)
@@ -193,6 +191,7 @@ zeitro/
 | POST | /api/v1/account/change-password | Change password |
 | GET | /api/v1/account/export | Export all user data |
 | DELETE | /api/v1/account | Delete account |
+| POST | /api/v1/habits/check-missed | Apply missed habit penalties |
 
 ## Roadmap
 
@@ -201,29 +200,37 @@ zeitro/
 - [x] Task CRUD with tags, priorities, and notes
 - [x] Task search, filter by status, sort by deadline/priority/created
 - [x] Task duplicate
+- [x] Grid and list view toggle
 - [x] Work session time tracking (manual + pomodoro)
 - [x] Pomodoro timer with circular progress ring and audio alert
 - [x] Gamification (earn/lose virtual currency)
 - [x] Auto-penalty for overdue tasks (every 12 hours)
 - [x] Habit tracking with daily/weekly/monthly cadence
 - [x] Year dot grid heatmap (GitHub-style) for habits
-- [x] Habit streaks
+- [x] Habit streaks and backfill past dates with late penalty
+- [x] Missed habit penalties (auto-deduct for yesterday)
 - [x] Analytics dashboard (summary, daily, weekly, tag breakdown, habit stats)
-- [x] Auth (login/signup/logout)
-- [x] Settings (profile, change password, export data, delete account)
+- [x] Auth (login/signup/logout, registration toggle)
+- [x] Settings (profile, tags, change password, export data, delete account)
+- [x] About page (Parkinson's Law, Zeitro etymology)
 - [x] Dark/light mode (server-persisted preference)
 - [x] Toast notifications for all actions
+- [x] PWA (installable on Android and desktop)
 - [x] Docker containerization
-- [x] 75 unit tests + E2E suite
+- [x] SvelteKit frontend rewrite (migrated from Next.js)
+- [x] Security hardening (rate limiting, input validation, CSRF)
+- [x] GitHub Actions CI/CD (GHCR images)
+- [x] 80 unit tests + E2E suite
 
 ### Planned
+- [ ] Goals & Aims (link tasks/habits to long-term goals)
+- [ ] Daily journal with mood tracking
+- [ ] Sleep tracking with productivity correlation
+- [ ] Weekly review auto-generated dashboard
+- [ ] Focus score (daily composite metric)
+- [ ] Expense tracking
 - [ ] Recurring tasks
-- [ ] PWA (installable on phone)
 - [ ] Push notifications for approaching deadlines
-- [ ] Achievement badges and streaks for tasks
-- [ ] Currency transaction history view
-- [ ] Data visualization charts
-- [ ] Team/shared tasks (SaaS prep)
 
 ## Contributing
 
