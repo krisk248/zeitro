@@ -9,6 +9,7 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000"]}
       - COOKIE_SECURE=${COOKIE_SECURE:-false}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN:-}
+      - REGISTRATION_ENABLED=${REGISTRATION_ENABLED:-true}
     volumes:
       - zeitro-data:/data
     healthcheck:
@@ -22,7 +23,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./frontend-svelte
     restart: unless-stopped
     ports:
       - "${ZEITRO_PORT:-3000}:3000"
